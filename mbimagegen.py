@@ -51,17 +51,28 @@ def create_modern_overlay(img, title, subtext, design_style="slanted", text_posi
     overlay = Image.new("RGBA", (1200, 630), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
     
+    # Calculate dynamic font sizes based on image size (20% of image area)
+    # Title font should be approximately 8% of image width
+    title_font_size = int(img.width * 0.08)  # ~96px for 1200px width
+    sub_font_size = int(img.width * 0.045)   # ~54px for 1200px width
+    
     # Load fonts with fallback
     try:
-        font_title = ImageFont.truetype("arial.ttf", 64)
-        font_sub = ImageFont.truetype("arial.ttf", 36)
+        font_title = ImageFont.truetype("arial.ttf", title_font_size)
+        font_sub = ImageFont.truetype("arial.ttf", sub_font_size)
     except:
         try:
-            font_title = ImageFont.load_default()
-            font_sub = ImageFont.load_default()
+            # Try other common system fonts
+            font_title = ImageFont.truetype("calibri.ttf", title_font_size)
+            font_sub = ImageFont.truetype("calibri.ttf", sub_font_size)
         except:
-            font_title = ImageFont.load_default()
-            font_sub = ImageFont.load_default()
+            try:
+                # Try default with custom size
+                font_title = ImageFont.load_default()
+                font_sub = ImageFont.load_default()
+            except:
+                font_title = ImageFont.load_default()
+                font_sub = ImageFont.load_default()
     
     # Calculate text dimensions
     title_bbox = draw.textbbox((0, 0), title, font=font_title)
@@ -74,10 +85,16 @@ def create_modern_overlay(img, title, subtext, design_style="slanted", text_posi
     
     # Design style implementations
     if design_style == "slanted":
-        # Create slanted background box
-        padding = 30
-        box_width = max(title_width, subtext_width) + padding * 2
-        box_height = title_height + subtext_height + padding * 3
+        # Create slanted background box - make it larger and more prominent
+        padding = int(img.width * 0.04)  # Dynamic padding based on image size
+        box_width = max(title_width, subtext_width) + padding * 3
+        box_height = title_height + subtext_height + padding * 4
+        
+        # Ensure minimum box size for visibility (20% of image area)
+        min_box_width = int(img.width * 0.4)
+        min_box_height = int(img.height * 0.25)
+        box_width = max(box_width, min_box_width)
+        box_height = max(box_height, min_box_height)
         
         if text_position == "top-left":
             # Slanted box coordinates
@@ -88,8 +105,8 @@ def create_modern_overlay(img, title, subtext, design_style="slanted", text_posi
                 (0, box_height + 20)
             ]
         elif text_position == "bottom-right":
-            x_start = 1200 - box_width - 40
-            y_start = 630 - box_height - 20
+            x_start = img.width - box_width - 40
+            y_start = img.height - box_height - 20
             points = [
                 (x_start, y_start),
                 (x_start + box_width + 20, y_start),
@@ -97,8 +114,8 @@ def create_modern_overlay(img, title, subtext, design_style="slanted", text_posi
                 (x_start - 20, y_start + box_height)
             ]
         else:  # center
-            x_start = (1200 - box_width) // 2
-            y_start = (630 - box_height) // 2
+            x_start = (img.width - box_width) // 2
+            y_start = (img.height - box_height) // 2
             points = [
                 (x_start - 20, y_start),
                 (x_start + box_width + 20, y_start),
@@ -106,44 +123,50 @@ def create_modern_overlay(img, title, subtext, design_style="slanted", text_posi
                 (x_start - 40, y_start + box_height)
             ]
         
-        # Draw slanted box with gradient effect
-        draw.polygon(points, fill=(0, 0, 0, 180))
+        # Draw slanted box with stronger opacity for better text visibility
+        draw.polygon(points, fill=(0, 0, 0, 220))
         
-        # Add border
-        draw.polygon(points, outline=(255, 255, 255, 100), width=2)
+        # Add brighter border for contrast
+        draw.polygon(points, outline=(255, 255, 255, 150), width=3)
         
     elif design_style == "rounded":
-        # Rounded rectangle background
-        padding = 40
-        box_width = max(title_width, subtext_width) + padding * 2
-        box_height = title_height + subtext_height + padding * 3
+        # Rounded rectangle background - larger and more prominent
+        padding = int(img.width * 0.05)
+        box_width = max(title_width, subtext_width) + padding * 3
+        box_height = title_height + subtext_height + padding * 4
+        
+        # Ensure minimum box size for visibility
+        min_box_width = int(img.width * 0.4)
+        min_box_height = int(img.height * 0.25)
+        box_width = max(box_width, min_box_width)
+        box_height = max(box_height, min_box_height)
         
         if text_position == "top-left":
-            box_coords = [20, 20, box_width + 20, box_height + 20]
+            box_coords = [30, 30, box_width + 30, box_height + 30]
         elif text_position == "bottom-right":
-            box_coords = [1200 - box_width - 20, 630 - box_height - 20, 1200 - 20, 630 - 20]
+            box_coords = [img.width - box_width - 30, img.height - box_height - 30, img.width - 30, img.height - 30]
         else:  # center
-            x_start = (1200 - box_width) // 2
-            y_start = (630 - box_height) // 2
+            x_start = (img.width - box_width) // 2
+            y_start = (img.height - box_height) // 2
             box_coords = [x_start, y_start, x_start + box_width, y_start + box_height]
         
-        # Draw rounded rectangle
-        draw.rounded_rectangle(box_coords, radius=20, fill=(0, 0, 0, 160))
-        draw.rounded_rectangle(box_coords, radius=20, outline=(255, 255, 255, 80), width=2)
+        # Draw rounded rectangle with stronger background
+        draw.rounded_rectangle(box_coords, radius=25, fill=(0, 0, 0, 200))
+        draw.rounded_rectangle(box_coords, radius=25, outline=(255, 255, 255, 120), width=3)
         
     elif design_style == "gradient":
-        # Create gradient overlay
-        gradient_height = title_height + subtext_height + 100
+        # Create stronger gradient overlay for better text visibility
+        gradient_height = max(title_height + subtext_height + 150, int(img.height * 0.35))
         
         if text_position == "top-left":
             for y in range(gradient_height):
-                opacity = int(200 * (1 - y / gradient_height))
-                draw.rectangle([0, y, 1200, y + 1], fill=(0, 0, 0, opacity))
+                opacity = int(240 * (1 - y / gradient_height))
+                draw.rectangle([0, y, img.width, y + 1], fill=(0, 0, 0, opacity))
         elif text_position == "bottom-right":
-            start_y = 630 - gradient_height
+            start_y = img.height - gradient_height
             for y in range(gradient_height):
-                opacity = int(200 * (y / gradient_height))
-                draw.rectangle([0, start_y + y, 1200, start_y + y + 1], fill=(0, 0, 0, opacity))
+                opacity = int(240 * (y / gradient_height))
+                draw.rectangle([0, start_y + y, img.width, start_y + y + 1], fill=(0, 0, 0, opacity))
     
     # Calculate text positions
     if text_position == "top-left":
