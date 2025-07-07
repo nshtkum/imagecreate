@@ -375,12 +375,13 @@ with col2:
                 # Display result
                 st.markdown('<div class="success-box">✅ <strong>Success!</strong> Your featured image is ready</div>', unsafe_allow_html=True)
                 
-                col1, col2 = st.columns([2, 1])
+                # Large image display - prioritize image viewing
+                st.image(final_image, caption="🎯 Your Featured Image", use_container_width=True)
+                
+                # Compact controls below the image
+                col1, col2, col3 = st.columns([1, 1, 1])
                 
                 with col1:
-                    st.image(final_image, caption="Your Featured Image", use_container_width=True)
-                
-                with col2:
                     # Save image to buffer
                     buf = io.BytesIO()
                     final_image.save(buf, format=output_format, quality=95)
@@ -394,13 +395,25 @@ with col2:
                         mime=f"image/{output_format.lower()}",
                         use_container_width=True
                     )
-                    
-                    # Image info
-                    st.markdown("**📊 Image Details:**")
-                    st.markdown(f"• Size: 1200 × 630 px")
-                    st.markdown(f"• Format: {output_format}")
-                    st.markdown(f"• Style: {design_style.title()}")
-                    st.markdown(f"• Position: {text_position.replace('-', ' ').title()}")
+                
+                with col2:
+                    # Regenerate button
+                    if st.button("🔄 Regenerate", use_container_width=True):
+                        st.rerun()
+                
+                with col3:
+                    # Share button (placeholder)
+                    st.button("📤 Share", use_container_width=True, disabled=True, help="Share functionality coming soon")
+                
+                # Image details in an expander to save space
+                with st.expander("📊 Image Details & Info"):
+                    detail_col1, detail_col2 = st.columns(2)
+                    with detail_col1:
+                        st.markdown(f"**Size:** 1200 × 630 px")
+                        st.markdown(f"**Format:** {output_format}")
+                    with detail_col2:
+                        st.markdown(f"**Style:** {design_style.title()}")
+                        st.markdown(f"**Position:** {text_position.replace('-', ' ').title()}")
                 
             except Exception as e:
                 st.error(f"❌ Error: {str(e)}")
