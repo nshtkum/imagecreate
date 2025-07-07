@@ -37,9 +37,9 @@ client = init_hf_client()
 # ----------------------------
 # ENHANCED TEXT OVERLAY FUNCTION
 # ----------------------------
-def create_modern_overlay(img, title, subtext, design_style="slanted", text_position="top-left", 
+def create_modern_overlay(img, title, subtext, design_style="rectangle", text_position="top-left", 
                          overlay_color="Black", transparency=75, text_color="White", 
-                         custom_color=None, custom_text_color=None):
+                         custom_color=None, custom_text_color=None, show_overlay=True):
     """Create a modern, professional overlay with various design options"""
     
     # Convert color selections to RGB values
@@ -167,100 +167,81 @@ def create_modern_overlay(img, title, subtext, design_style="slanted", text_posi
             subtext_width = subtext_bbox[2] - subtext_bbox[0]
             subtext_height = subtext_bbox[3] - subtext_bbox[1]
     
-    # Design style implementations
-    if design_style == "slanted":
-        # Create slanted background box - make it larger and more prominent
-        padding = int(img.width * 0.04)  # Dynamic padding based on image size
-        box_width = max(title_width, subtext_width) + padding * 3
-        box_height = title_height + subtext_height + padding * 4
-        
-        # Ensure minimum box size for visibility (20% of image area)
-        min_box_width = int(img.width * 0.4)
-        min_box_height = int(img.height * 0.25)
-        box_width = max(box_width, min_box_width)
-        box_height = max(box_height, min_box_height)
-        
-        if text_position == "top-left":
-            # Slanted box coordinates
-            points = [
-                (20, 20),
-                (box_width + 40, 20),
-                (box_width + 20, box_height + 20),
-                (0, box_height + 20)
-            ]
-        elif text_position == "bottom-right":
-            x_start = img.width - box_width - 40
-            y_start = img.height - box_height - 20
-            points = [
-                (x_start, y_start),
-                (x_start + box_width + 20, y_start),
-                (x_start + box_width, y_start + box_height),
-                (x_start - 20, y_start + box_height)
-            ]
-        else:  # center
-            x_start = (img.width - box_width) // 2
-            y_start = (img.height - box_height) // 2
-            points = [
-                (x_start - 20, y_start),
-                (x_start + box_width + 20, y_start),
-                (x_start + box_width, y_start + box_height),
-                (x_start - 40, y_start + box_height)
-            ]
-        
-        # Draw slanted box with custom color and transparency
-        draw.polygon(points, fill=(*bg_color, alpha))
-        
-        # Add border with contrasting color
-        border_color = (255, 255, 255, 150) if sum(bg_color) < 400 else (0, 0, 0, 150)
-        draw.polygon(points, outline=border_color, width=3)
-        
-    elif design_style == "rounded":
-        # Rounded rectangle background - larger and more prominent
-        padding = int(img.width * 0.05)
-        box_width = max(title_width, subtext_width) + padding * 3
-        box_height = title_height + subtext_height + padding * 4
-        
-        # Ensure minimum box size for visibility
-        min_box_width = int(img.width * 0.4)
-        min_box_height = int(img.height * 0.25)
-        box_width = max(box_width, min_box_width)
-        box_height = max(box_height, min_box_height)
-        
-        if text_position == "top-left":
-            box_coords = [30, 30, box_width + 30, box_height + 30]
-        elif text_position == "bottom-right":
-            box_coords = [img.width - box_width - 30, img.height - box_height - 30, img.width - 30, img.height - 30]
-        else:  # center
-            x_start = (img.width - box_width) // 2
-            y_start = (img.height - box_height) // 2
-            box_coords = [x_start, y_start, x_start + box_width, y_start + box_height]
-        
-        # Draw rounded rectangle with custom color and transparency
-        draw.rounded_rectangle(box_coords, radius=25, fill=(*bg_color, alpha))
-        border_color = (255, 255, 255, 120) if sum(bg_color) < 400 else (0, 0, 0, 120)
-        draw.rounded_rectangle(box_coords, radius=25, outline=border_color, width=3)
-        
-    elif design_style == "gradient":
-        # Create stronger gradient overlay for better text visibility
-        gradient_height = max(title_height + subtext_height + 150, int(img.height * 0.35))
-        
-        if text_position == "top-left":
-            for y in range(gradient_height):
-                gradient_alpha = int(alpha * (1 - y / gradient_height))
-                draw.rectangle([0, y, img.width, y + 1], fill=(*bg_color, gradient_alpha))
-        elif text_position == "bottom-right":
-            start_y = img.height - gradient_height
-            for y in range(gradient_height):
-                gradient_alpha = int(alpha * (y / gradient_height))
-                draw.rectangle([0, start_y + y, img.width, start_y + y + 1], fill=(*bg_color, gradient_alpha))
+    # Design style implementations - only if overlay is enabled
+    if show_overlay:
+        if design_style == "rectangle":
+            # Create simple rectangle background box - no slant, no outline
+            padding = int(img.width * 0.04)
+            box_width = max(title_width, subtext_width) + padding * 3
+            box_height = title_height + subtext_height + padding * 4
+            
+            # Ensure minimum box size for visibility
+            min_box_width = int(img.width * 0.4)
+            min_box_height = int(img.height * 0.25)
+            box_width = max(box_width, min_box_width)
+            box_height = max(box_height, min_box_height)
+            
+            if text_position == "top-left":
+                # Simple rectangle coordinates
+                box_coords = [30, 30, box_width + 30, box_height + 30]
+            elif text_position == "bottom-right":
+                box_coords = [img.width - box_width - 30, img.height - box_height - 30, img.width - 30, img.height - 30]
+            else:  # center
+                x_start = (img.width - box_width) // 2
+                y_start = (img.height - box_height) // 2
+                box_coords = [x_start, y_start, x_start + box_width, y_start + box_height]
+            
+            # Draw simple rectangle with custom color and transparency - NO OUTLINE
+            draw.rectangle(box_coords, fill=(*bg_color, alpha))
+            
+        elif design_style == "rounded":
+            # Rounded rectangle background - larger and more prominent
+            padding = int(img.width * 0.05)
+            box_width = max(title_width, subtext_width) + padding * 3
+            box_height = title_height + subtext_height + padding * 4
+            
+            # Ensure minimum box size for visibility
+            min_box_width = int(img.width * 0.4)
+            min_box_height = int(img.height * 0.25)
+            box_width = max(box_width, min_box_width)
+            box_height = max(box_height, min_box_height)
+            
+            if text_position == "top-left":
+                box_coords = [30, 30, box_width + 30, box_height + 30]
+            elif text_position == "bottom-right":
+                box_coords = [img.width - box_width - 30, img.height - box_height - 30, img.width - 30, img.height - 30]
+            else:  # center
+                x_start = (img.width - box_width) // 2
+                y_start = (img.height - box_height) // 2
+                box_coords = [x_start, y_start, x_start + box_width, y_start + box_height]
+            
+            # Draw rounded rectangle with custom color and transparency
+            draw.rounded_rectangle(box_coords, radius=25, fill=(*bg_color, alpha))
+            border_color = (255, 255, 255, 120) if sum(bg_color) < 400 else (0, 0, 0, 120)
+            draw.rounded_rectangle(box_coords, radius=25, outline=border_color, width=3)
+            
+        elif design_style == "gradient":
+            # Create stronger gradient overlay for better text visibility
+            gradient_height = max(title_height + subtext_height + 150, int(img.height * 0.35))
+            
+            if text_position == "top-left":
+                for y in range(gradient_height):
+                    gradient_alpha = int(alpha * (1 - y / gradient_height))
+                    draw.rectangle([0, y, img.width, y + 1], fill=(*bg_color, gradient_alpha))
+            elif text_position == "bottom-right":
+                start_y = img.height - gradient_height
+                for y in range(gradient_height):
+                    gradient_alpha = int(alpha * (y / gradient_height))
+                    draw.rectangle([0, start_y + y, img.width, start_y + y + 1], fill=(*bg_color, gradient_alpha))
     
-    # Calculate text positions with proper padding and spacing
-    text_padding = int(img.width * 0.04)  # Dynamic padding
-    line_spacing = int(title_font_size * 0.3)  # Space between title and subtext
+    # Calculate text positions with adjusted positioning - slightly more towards center from left
+    text_padding = int(img.width * 0.04)
+    line_spacing = int(title_font_size * 0.3)
     
     if text_position == "top-left":
-        title_pos = (text_padding + 20, text_padding + 20)
-        subtext_pos = (text_padding + 20, text_padding + 20 + title_height + line_spacing)
+        # Move text slightly more towards center and down from current position
+        title_pos = (text_padding + 60, text_padding + 80)  # Moved right by 40px and down by 60px
+        subtext_pos = (text_padding + 60, text_padding + 80 + title_height + line_spacing)
     elif text_position == "bottom-right":
         title_pos = (img.width - title_width - text_padding - 20, img.height - title_height - subtext_height - line_spacing - text_padding - 20)
         subtext_pos = (img.width - subtext_width - text_padding - 20, img.height - subtext_height - text_padding - 20)
@@ -374,9 +355,12 @@ with st.sidebar:
     
     design_style = st.selectbox(
         "Overlay Style",
-        ["slanted", "rounded", "gradient"],
+        ["rectangle", "rounded", "gradient"],
         index=0
     )
+    
+    # Toggle for overlay visibility
+    show_overlay = st.checkbox("Show Background Overlay", value=True)
     
     text_position = st.selectbox(
         "Text Position",
@@ -500,7 +484,8 @@ with col2:
                     transparency,
                     text_color,
                     custom_color if overlay_color == "Custom" else None,
-                    custom_text_color if text_color == "Custom" else None
+                    custom_text_color if text_color == "Custom" else None,
+                    show_overlay
                 )
                 
                 # Display result
