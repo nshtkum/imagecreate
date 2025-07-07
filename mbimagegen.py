@@ -20,28 +20,44 @@ client = InferenceClient(
 # ----------------------------
 
 def overlay_text(img, title, subtext):
-    # Resize to 1200x630
+    # Resize to standard banner size
     img = img.resize((1200, 630))
     draw = ImageDraw.Draw(img)
 
-    # Try to load font
+    # Load font (fallback to default if not available)
     try:
-        font_title = ImageFont.truetype("arial.ttf", 60)
-        font_sub = ImageFont.truetype("arial.ttf", 40)
+        font_title = ImageFont.truetype("arial.ttf", 58)
+        font_sub = ImageFont.truetype("arial.ttf", 38)
     except:
         font_title = ImageFont.load_default()
         font_sub = ImageFont.load_default()
 
-    # Add a semi-transparent black bar at the top
-    bar_height = 160
-    overlay = Image.new("RGBA", (1200, bar_height), (0, 0, 0, 180))  # black with opacity
-    img.paste(overlay, (0, 0), overlay)
+    # Gradient overlay at top (simulated by semi-transparent fade)
+    gradient = Image.new("RGBA", (1200, 250), color=(0, 0, 0, 0))
+    for y in range(250):
+        opacity = int(180 * (1 - y / 250))  # fade from 180 to 0
+        line = Image.new("RGBA", (1200, 1), (0, 0, 0, opacity))
+        gradient.paste(line, (0, y))
+    img = Image.alpha_composite(img.convert("RGBA"), gradient)
 
-    # Draw title and subtext on top of the bar
-    draw.text((40, 40), title, font=font_title, fill="white")
-    draw.text((40, 100), subtext, font=font_sub, fill="white")
+    # Add glow effect behind text
+    def draw_glow_text(draw_obj, position, text, font, glow_color="black", text_color="white"):
+        x, y = position
+        # glow (shadow)
+        for offset in [(1,1), (-1,-1), (-1,1), (1,-1)]:
+            draw_obj.text((x+offset[0], y+offset[1]), text, font=font, fill=glow_color)
+        # main text
+        draw_obj.text(position, text, font=font, fill=text_color)
 
-    return img
+    # Text positions
+    title_pos = (40, 40)
+    subtext_pos = (40, 110)
+
+    draw = ImageDraw.Draw(img)
+    draw_glow_text(draw, title_pos, title, font_title)
+    draw_glow_text(draw, subtext_pos, subtext, font_sub)
+
+    return img.convert("RGB")
 
 # ----------------------------
 # STREAMLIT UI
