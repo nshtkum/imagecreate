@@ -1,3 +1,33 @@
-streamlit>=1.25.0
-huggingface_hub>=0.17.1
-Pillow>=9.5.0
+# Core Streamlit and web framework
+streamlit>=1.28.0
+
+# Hugging Face integration
+huggingface-hub>=0.17.0
+
+# Image processing and manipulation
+Pillow>=10.0.0
+
+# Numerical computing
+numpy>=1.24.0
+
+# HTTP requests (for potential API calls)
+requests>=2.31.0
+
+# Optional: Enhanced image processing
+opencv-python-headless>=4.8.0
+
+# Optional: Advanced image filters and effects
+scikit-image>=0.21.0
+
+# Optional: Color palette extraction
+colorthief>=0.2.1
+
+# Optional: Image optimization
+imageio>=2.31.0
+
+# Optional: Font handling (if using custom fonts)
+matplotlib>=3.7.0
+
+# Development and debugging (optional)
+# streamlit-option-menu>=0.3.6
+# plotly>=5.15.0
