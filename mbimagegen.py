@@ -37,8 +37,42 @@ client = init_hf_client()
 # ----------------------------
 # ENHANCED TEXT OVERLAY FUNCTION
 # ----------------------------
-def create_modern_overlay(img, title, subtext, design_style="slanted", text_position="top-left"):
+def create_modern_overlay(img, title, subtext, design_style="slanted", text_position="top-left", 
+                         overlay_color="Black", transparency=75, text_color="White", 
+                         custom_color=None, custom_text_color=None):
     """Create a modern, professional overlay with various design options"""
+    
+    # Convert color selections to RGB values
+    color_map = {
+        "Black": (0, 0, 0),
+        "Dark Blue": (25, 42, 86),
+        "Dark Green": (21, 71, 52),
+        "Dark Red": (139, 0, 0),
+        "White": (255, 255, 255)
+    }
+    
+    if overlay_color == "Custom" and custom_color:
+        # Convert hex to RGB
+        hex_color = custom_color.lstrip('#')
+        bg_color = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+    else:
+        bg_color = color_map.get(overlay_color, (0, 0, 0))
+    
+    # Calculate alpha from transparency percentage
+    alpha = int(255 * (transparency / 100))
+    
+    # Text color conversion
+    text_color_map = {
+        "White": (255, 255, 255, 255),
+        "Black": (0, 0, 0, 255),
+        "Yellow": (255, 255, 0, 255)
+    }
+    
+    if text_color == "Custom" and custom_text_color:
+        hex_text = custom_text_color.lstrip('#')
+        final_text_color = tuple(int(hex_text[i:i+2], 16) for i in (0, 2, 4)) + (255,)
+    else:
+        final_text_color = text_color_map.get(text_color, (255, 255, 255, 255))
     
     # Ensure image is in RGB mode
     if img.mode != 'RGB':
@@ -173,11 +207,12 @@ def create_modern_overlay(img, title, subtext, design_style="slanted", text_posi
                 (x_start - 40, y_start + box_height)
             ]
         
-        # Draw slanted box with stronger opacity for better text visibility
-        draw.polygon(points, fill=(0, 0, 0, 220))
+        # Draw slanted box with custom color and transparency
+        draw.polygon(points, fill=(*bg_color, alpha))
         
-        # Add brighter border for contrast
-        draw.polygon(points, outline=(255, 255, 255, 150), width=3)
+        # Add border with contrasting color
+        border_color = (255, 255, 255, 150) if sum(bg_color) < 400 else (0, 0, 0, 150)
+        draw.polygon(points, outline=border_color, width=3)
         
     elif design_style == "rounded":
         # Rounded rectangle background - larger and more prominent
@@ -200,9 +235,10 @@ def create_modern_overlay(img, title, subtext, design_style="slanted", text_posi
             y_start = (img.height - box_height) // 2
             box_coords = [x_start, y_start, x_start + box_width, y_start + box_height]
         
-        # Draw rounded rectangle with stronger background
-        draw.rounded_rectangle(box_coords, radius=25, fill=(0, 0, 0, 200))
-        draw.rounded_rectangle(box_coords, radius=25, outline=(255, 255, 255, 120), width=3)
+        # Draw rounded rectangle with custom color and transparency
+        draw.rounded_rectangle(box_coords, radius=25, fill=(*bg_color, alpha))
+        border_color = (255, 255, 255, 120) if sum(bg_color) < 400 else (0, 0, 0, 120)
+        draw.rounded_rectangle(box_coords, radius=25, outline=border_color, width=3)
         
     elif design_style == "gradient":
         # Create stronger gradient overlay for better text visibility
@@ -210,13 +246,13 @@ def create_modern_overlay(img, title, subtext, design_style="slanted", text_posi
         
         if text_position == "top-left":
             for y in range(gradient_height):
-                opacity = int(240 * (1 - y / gradient_height))
-                draw.rectangle([0, y, img.width, y + 1], fill=(0, 0, 0, opacity))
+                gradient_alpha = int(alpha * (1 - y / gradient_height))
+                draw.rectangle([0, y, img.width, y + 1], fill=(*bg_color, gradient_alpha))
         elif text_position == "bottom-right":
             start_y = img.height - gradient_height
             for y in range(gradient_height):
-                opacity = int(240 * (y / gradient_height))
-                draw.rectangle([0, start_y + y, img.width, start_y + y + 1], fill=(0, 0, 0, opacity))
+                gradient_alpha = int(alpha * (y / gradient_height))
+                draw.rectangle([0, start_y + y, img.width, start_y + y + 1], fill=(*bg_color, gradient_alpha))
     
     # Calculate text positions with proper padding and spacing
     text_padding = int(img.width * 0.04)  # Dynamic padding
@@ -232,12 +268,18 @@ def create_modern_overlay(img, title, subtext, design_style="slanted", text_posi
         title_pos = ((img.width - title_width) // 2, (img.height - title_height - subtext_height - line_spacing) // 2)
         subtext_pos = ((img.width - subtext_width) // 2, (img.height - subtext_height - line_spacing) // 2 + title_height + line_spacing)
     
-    # Draw text with enhanced shadow/glow effect for better visibility
-    def draw_text_with_shadow(draw_obj, position, text, font, shadow_color=(0, 0, 0, 255), text_color=(255, 255, 255, 255)):
+    # Draw text with enhanced shadow/glow effect
+    def draw_text_with_shadow(draw_obj, position, text, font, text_color=final_text_color):
         x, y = position
-        shadow_offset = max(2, int(font.size * 0.03))  # Dynamic shadow based on font size
+        shadow_offset = max(2, int(font.size * 0.03))
         
-        # Multiple shadow layers for stronger effect
+        # Smart shadow color based on text color
+        if sum(text_color[:3]) > 400:  # Light text
+            shadow_color = (0, 0, 0, 255)  # Dark shadow
+        else:  # Dark text
+            shadow_color = (255, 255, 255, 255)  # Light shadow
+        
+        # Multiple shadow layers
         for offset in range(shadow_offset, 0, -1):
             shadow_alpha = int(255 * (offset / shadow_offset) * 0.8)
             for dx, dy in [(offset, offset), (-offset, -offset), (-offset, offset), (offset, -offset), 
@@ -247,7 +289,7 @@ def create_modern_overlay(img, title, subtext, design_style="slanted", text_posi
                 else:
                     draw_obj.text((x + dx, y + dy), text, font=font, fill=(*shadow_color[:3], shadow_alpha))
         
-        # Main text with full opacity
+        # Main text
         if '\n' in text:
             draw_obj.multiline_text(position, text, font=font, fill=text_color)
         else:
@@ -324,32 +366,59 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="main-header"><h1>🏠 Magicbricks Featured Image Generator</h1><p>Create stunning property images with professional overlays</p></div>', unsafe_allow_html=True)
+st.markdown('<div class="main-header"><h1>🏠 Property Image Generator</h1></div>', unsafe_allow_html=True)
 
-# Sidebar for advanced options
+# Sidebar for design options
 with st.sidebar:
     st.header("🎨 Design Options")
     
     design_style = st.selectbox(
         "Overlay Style",
         ["slanted", "rounded", "gradient"],
-        index=0,
-        help="Choose the style of your text overlay"
+        index=0
     )
     
     text_position = st.selectbox(
         "Text Position",
         ["top-left", "bottom-right", "center"],
-        index=0,
-        help="Where to place the text on the image"
+        index=0
     )
     
-    st.header("📏 Image Settings")
+    # Color and transparency options
+    st.subheader("Color & Transparency")
+    
+    overlay_color = st.selectbox(
+        "Overlay Color",
+        ["Black", "Dark Blue", "Dark Green", "Dark Red", "White", "Custom"],
+        index=0
+    )
+    
+    if overlay_color == "Custom":
+        custom_color = st.color_picker("Pick Color", "#000000")
+    
+    transparency = st.slider(
+        "Transparency",
+        min_value=0,
+        max_value=100,
+        value=75,
+        help="0 = Fully transparent, 100 = Fully opaque"
+    )
+    
+    # Text color
+    text_color = st.selectbox(
+        "Text Color",
+        ["White", "Black", "Yellow", "Custom"],
+        index=0
+    )
+    
+    if text_color == "Custom":
+        custom_text_color = st.color_picker("Pick Text Color", "#FFFFFF")
+    
+    st.header("📏 Output")
     output_format = st.selectbox(
-        "Output Format",
+        "Format",
         ["PNG", "JPEG"],
-        index=0,
-        help="Choose the output format"
+        index=0
     )
 
 # Main content area
@@ -364,61 +433,30 @@ with col1:
     )
     
     if image_source == "Generate with AI":
-        st.markdown('<div class="feature-box">🤖 <strong>AI Image Generation</strong><br>Describe your property and let AI create a professional image</div>', unsafe_allow_html=True)
-        
         prompt = st.text_area(
             "📝 Describe your property",
-            value="modern Indian apartment in Bangalore, garden view, bright daylight, professional photography",
-            height=100,
-            help="Be specific about the property type, location, and desired ambiance"
+            value="modern Indian apartment in Bangalore, garden view, bright daylight",
+            height=80
         )
-        
-        # Prompt suggestions
-        st.markdown("**💡 Prompt Suggestions:**")
-        suggestions = [
-            "luxury villa with swimming pool, Mumbai, sunset lighting",
-            "modern office space, glass windows, city view, professional",
-            "cozy 2BHK apartment, balcony garden, natural lighting",
-            "commercial shop, busy street, evening lights, attractive storefront"
-        ]
-        
-        selected_suggestion = st.selectbox(
-            "Quick prompts",
-            [""] + suggestions,
-            help="Select a pre-made prompt or write your own"
-        )
-        
-        if selected_suggestion:
-            prompt = selected_suggestion
     
     else:
-        st.markdown('<div class="feature-box">📤 <strong>Upload Your Image</strong><br>Upload a high-quality image of your property</div>', unsafe_allow_html=True)
-        
         uploaded_file = st.file_uploader(
             "Choose an image file",
-            type=['png', 'jpg', 'jpeg'],
-            help="Upload a clear, high-resolution image for best results"
+            type=['png', 'jpg', 'jpeg']
         )
 
 with col2:
-    st.markdown("### 📋 Text Overlay")
+    st.markdown("### 📋 Text Content")
     
     title = st.text_input(
         "🏷️ Main Title",
-        value="2BHK Flat in Bangalore",
-        help="Property type and location"
+        value="2BHK Flat in Bangalore"
     )
     
     subtext = st.text_input(
-        "💰 Subtext",
-        value="₹85 Lakh | Ready to Move",
-        help="Price, status, or additional details"
+        "💰 Subtitle",
+        value="₹85 Lakh | Ready to Move"
     )
-    
-    # Preview text styling
-    st.markdown("**Preview:**")
-    st.markdown(f"**{title}**")
-    st.markdown(f"*{subtext}*")
 
 # Generation button
 col1, col2, col3 = st.columns([1, 2, 1])
@@ -457,14 +495,19 @@ with col2:
                     title, 
                     subtext, 
                     design_style, 
-                    text_position
+                    text_position,
+                    overlay_color,
+                    transparency,
+                    text_color,
+                    custom_color if overlay_color == "Custom" else None,
+                    custom_text_color if text_color == "Custom" else None
                 )
                 
                 # Display result
-                st.markdown('<div class="success-box">✅ <strong>Success!</strong> Your featured image is ready</div>', unsafe_allow_html=True)
+                st.markdown('<div class="success-box">✅ Image generated successfully!</div>', unsafe_allow_html=True)
                 
                 # Large image display - prioritize image viewing
-                st.image(final_image, caption="🎯 Your Featured Image", use_container_width=True)
+                st.image(final_image, caption="Your Property Image", use_container_width=True)
                 
                 # Compact controls below the image
                 col1, col2, col3 = st.columns([1, 1, 1])
@@ -490,8 +533,9 @@ with col2:
                         st.rerun()
                 
                 with col3:
-                    # Share button (placeholder)
-                    st.button("📤 Share", use_container_width=True, disabled=True, help="Share functionality coming soon")
+                    # Info button
+                    if st.button("ℹ️ Info", use_container_width=True):
+                        st.info(f"Size: 1200×630px • Format: {output_format} • Style: {design_style.title()}")
                 
                 # Image details in an expander to save space
                 with st.expander("📊 Image Details & Info"):
@@ -505,30 +549,7 @@ with col2:
                 
             except Exception as e:
                 st.error(f"❌ Error: {str(e)}")
-                st.info("💡 Try uploading your own image or check your internet connection for AI generation.")
 
-# Footer with tips
+# Footer
 st.markdown("---")
-st.markdown("### 💡 Pro Tips")
-tips_col1, tips_col2 = st.columns(2)
-
-with tips_col1:
-    st.markdown("""
-    **For AI Generation:**
-    • Be specific about property type and location
-    • Mention lighting conditions (daylight, sunset, etc.)
-    • Include architectural style (modern, traditional, etc.)
-    • Add ambiance keywords (luxury, cozy, spacious)
-    """)
-
-with tips_col2:
-    st.markdown("""
-    **For Best Results:**
-    • Use high-resolution images (min 800×600)
-    • Keep text concise and impactful
-    • Choose contrasting colors for readability
-    • Test different overlay styles
-    """)
-
-st.markdown("---")
-st.markdown("*Made with ❤️ for Magicbricks - Creating professional property images made easy*")
+st.markdown("*Professional property image generator*")
