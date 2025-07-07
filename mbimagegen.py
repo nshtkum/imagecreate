@@ -51,28 +51,34 @@ def create_modern_overlay(img, title, subtext, design_style="slanted", text_posi
     overlay = Image.new("RGBA", (1200, 630), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
     
-    # Calculate dynamic font sizes based on image size (20% of image area)
-    # Title font should be approximately 8% of image width
-    title_font_size = int(img.width * 0.08)  # ~96px for 1200px width
-    sub_font_size = int(img.width * 0.045)   # ~54px for 1200px width
+    # Calculate much larger font sizes for better visibility
+    # Title font should be approximately 12% of image width for prominence
+    title_font_size = int(img.width * 0.12)  # ~144px for 1200px width - MUCH LARGER
+    sub_font_size = int(img.width * 0.07)    # ~84px for 1200px width - MUCH LARGER
     
-    # Load fonts with fallback
+    # Load fonts with much larger sizes and better fallback
     try:
         font_title = ImageFont.truetype("arial.ttf", title_font_size)
         font_sub = ImageFont.truetype("arial.ttf", sub_font_size)
     except:
         try:
-            # Try other common system fonts
+            # Try other common system fonts with large sizes
             font_title = ImageFont.truetype("calibri.ttf", title_font_size)
             font_sub = ImageFont.truetype("calibri.ttf", sub_font_size)
         except:
             try:
-                # Try default with custom size
-                font_title = ImageFont.load_default()
-                font_sub = ImageFont.load_default()
+                # Try with different font names for cross-platform compatibility
+                font_title = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", title_font_size)
+                font_sub = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", sub_font_size)
             except:
-                font_title = ImageFont.load_default()
-                font_sub = ImageFont.load_default()
+                # Fallback: create a large default font
+                try:
+                    font_title = ImageFont.load_default().font_variant(size=title_font_size)
+                    font_sub = ImageFont.load_default().font_variant(size=sub_font_size)
+                except:
+                    # Final fallback
+                    font_title = ImageFont.load_default()
+                    font_sub = ImageFont.load_default()
     
     # Calculate text dimensions
     title_bbox = draw.textbbox((0, 0), title, font=font_title)
@@ -168,24 +174,33 @@ def create_modern_overlay(img, title, subtext, design_style="slanted", text_posi
                 opacity = int(240 * (y / gradient_height))
                 draw.rectangle([0, start_y + y, img.width, start_y + y + 1], fill=(0, 0, 0, opacity))
     
-    # Calculate text positions
-    if text_position == "top-left":
-        title_pos = (50, 50)
-        subtext_pos = (50, 50 + title_height + 20)
-    elif text_position == "bottom-right":
-        title_pos = (1200 - title_width - 50, 630 - title_height - subtext_height - 70)
-        subtext_pos = (1200 - subtext_width - 50, 630 - subtext_height - 30)
-    else:  # center
-        title_pos = ((1200 - title_width) // 2, (630 - title_height - subtext_height) // 2)
-        subtext_pos = ((1200 - subtext_width) // 2, (630 - subtext_height) // 2 + title_height + 20)
+    # Calculate text positions with proper padding and spacing
+    text_padding = int(img.width * 0.04)  # Dynamic padding
+    line_spacing = int(title_font_size * 0.3)  # Space between title and subtext
     
-    # Draw text with shadow/glow effect
+    if text_position == "top-left":
+        title_pos = (text_padding + 20, text_padding + 20)
+        subtext_pos = (text_padding + 20, text_padding + 20 + title_height + line_spacing)
+    elif text_position == "bottom-right":
+        title_pos = (img.width - title_width - text_padding - 20, img.height - title_height - subtext_height - line_spacing - text_padding - 20)
+        subtext_pos = (img.width - subtext_width - text_padding - 20, img.height - subtext_height - text_padding - 20)
+    else:  # center
+        title_pos = ((img.width - title_width) // 2, (img.height - title_height - subtext_height - line_spacing) // 2)
+        subtext_pos = ((img.width - subtext_width) // 2, (img.height - subtext_height - line_spacing) // 2 + title_height + line_spacing)
+    
+    # Draw text with enhanced shadow/glow effect for better visibility
     def draw_text_with_shadow(draw_obj, position, text, font, shadow_color=(0, 0, 0, 255), text_color=(255, 255, 255, 255)):
         x, y = position
-        # Shadow
-        for offset in [(2, 2), (-2, -2), (-2, 2), (2, -2), (0, 2), (2, 0), (-2, 0), (0, -2)]:
-            draw_obj.text((x + offset[0], y + offset[1]), text, font=font, fill=shadow_color)
-        # Main text
+        shadow_offset = max(2, int(font.size * 0.03))  # Dynamic shadow based on font size
+        
+        # Multiple shadow layers for stronger effect
+        for offset in range(shadow_offset, 0, -1):
+            shadow_alpha = int(255 * (offset / shadow_offset) * 0.8)
+            for dx, dy in [(offset, offset), (-offset, -offset), (-offset, offset), (offset, -offset), 
+                          (0, offset), (offset, 0), (-offset, 0), (0, -offset)]:
+                draw_obj.text((x + dx, y + dy), text, font=font, fill=(*shadow_color[:3], shadow_alpha))
+        
+        # Main text with full opacity
         draw_obj.text(position, text, font=font, fill=text_color)
     
     # Draw texts
