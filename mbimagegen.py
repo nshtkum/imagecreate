@@ -349,7 +349,7 @@ st.markdown("""
 
 st.markdown('<div class="main-header"><h1>🏠 Property Image Generator</h1></div>', unsafe_allow_html=True)
 
-# Sidebar for design options
+    # Sidebar for design options
 with st.sidebar:
     st.header("🎨 Design Options")
     
@@ -359,8 +359,8 @@ with st.sidebar:
         index=0
     )
     
-    # Toggle for overlay visibility
-    show_overlay = st.checkbox("Show Background Overlay", value=True)
+    # Toggle for overlay visibility - default to False (no background)
+    show_overlay = st.checkbox("Show Background Overlay", value=False)
     
     text_position = st.selectbox(
         "Text Position",
