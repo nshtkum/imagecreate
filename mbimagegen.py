@@ -378,7 +378,7 @@ with col2:
                 col1, col2 = st.columns([2, 1])
                 
                 with col1:
-                    st.image(final_image, caption="Your Featured Image", use_column_width=True)
+                    st.image(final_image, caption="Your Featured Image", use_container_width=True)
                 
                 with col2:
                     # Save image to buffer
