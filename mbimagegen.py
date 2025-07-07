@@ -51,10 +51,25 @@ def create_modern_overlay(img, title, subtext, design_style="slanted", text_posi
     overlay = Image.new("RGBA", (1200, 630), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
     
-    # Calculate much larger font sizes for better visibility
-    # Title font should be approximately 12% of image width for prominence
-    title_font_size = int(img.width * 0.12)  # ~144px for 1200px width - MUCH LARGER
-    sub_font_size = int(img.width * 0.07)    # ~84px for 1200px width - MUCH LARGER
+    # Smart font sizing - balance between visibility and fitting
+    # Start with optimal sizes and adjust based on text length
+    base_title_size = int(img.width * 0.08)  # ~96px for 1200px width
+    base_sub_size = int(img.width * 0.045)   # ~54px for 1200px width
+    
+    # Adjust font size based on text length to ensure it fits
+    title_length_factor = max(0.6, min(1.0, 30 / len(title))) if title else 1.0
+    sub_length_factor = max(0.7, min(1.0, 40 / len(subtext))) if subtext else 1.0
+    
+    title_font_size = int(base_title_size * title_length_factor)
+    sub_font_size = int(base_sub_size * sub_length_factor)
+    
+    # Ensure minimum readable sizes
+    title_font_size = max(title_font_size, 48)  # Minimum 48px
+    sub_font_size = max(sub_font_size, 28)      # Minimum 28px
+    
+    # Maximum sizes to prevent overflow
+    title_font_size = min(title_font_size, int(img.width * 0.1))  # Max 10% of width
+    sub_font_size = min(sub_font_size, int(img.width * 0.06))     # Max 6% of width
     
     # Load fonts with much larger sizes and better fallback
     try:
@@ -80,7 +95,7 @@ def create_modern_overlay(img, title, subtext, design_style="slanted", text_posi
                     font_title = ImageFont.load_default()
                     font_sub = ImageFont.load_default()
     
-    # Calculate text dimensions
+    # Calculate text dimensions with the adjusted font sizes
     title_bbox = draw.textbbox((0, 0), title, font=font_title)
     subtext_bbox = draw.textbbox((0, 0), subtext, font=font_sub)
     
@@ -88,6 +103,35 @@ def create_modern_overlay(img, title, subtext, design_style="slanted", text_posi
     title_height = title_bbox[3] - title_bbox[1]
     subtext_width = subtext_bbox[2] - subtext_bbox[0]
     subtext_height = subtext_bbox[3] - subtext_bbox[1]
+    
+    # Smart text wrapping if text is still too wide
+    max_width = img.width * 0.8  # Use 80% of image width max
+    
+    if title_width > max_width:
+        # Split title into two lines if too long
+        words = title.split()
+        if len(words) > 1:
+            mid = len(words) // 2
+            title_line1 = " ".join(words[:mid])
+            title_line2 = " ".join(words[mid:])
+            title = title_line1 + "\n" + title_line2
+            # Recalculate dimensions
+            title_bbox = draw.multiline_textbbox((0, 0), title, font=font_title)
+            title_width = title_bbox[2] - title_bbox[0]
+            title_height = title_bbox[3] - title_bbox[1]
+    
+    if subtext_width > max_width:
+        # Split subtext if too long
+        words = subtext.split()
+        if len(words) > 1:
+            mid = len(words) // 2
+            sub_line1 = " ".join(words[:mid])
+            sub_line2 = " ".join(words[mid:])
+            subtext = sub_line1 + "\n" + sub_line2
+            # Recalculate dimensions
+            subtext_bbox = draw.multiline_textbbox((0, 0), subtext, font=font_sub)
+            subtext_width = subtext_bbox[2] - subtext_bbox[0]
+            subtext_height = subtext_bbox[3] - subtext_bbox[1]
     
     # Design style implementations
     if design_style == "slanted":
@@ -198,10 +242,16 @@ def create_modern_overlay(img, title, subtext, design_style="slanted", text_posi
             shadow_alpha = int(255 * (offset / shadow_offset) * 0.8)
             for dx, dy in [(offset, offset), (-offset, -offset), (-offset, offset), (offset, -offset), 
                           (0, offset), (offset, 0), (-offset, 0), (0, -offset)]:
-                draw_obj.text((x + dx, y + dy), text, font=font, fill=(*shadow_color[:3], shadow_alpha))
+                if '\n' in text:
+                    draw_obj.multiline_text((x + dx, y + dy), text, font=font, fill=(*shadow_color[:3], shadow_alpha))
+                else:
+                    draw_obj.text((x + dx, y + dy), text, font=font, fill=(*shadow_color[:3], shadow_alpha))
         
         # Main text with full opacity
-        draw_obj.text(position, text, font=font, fill=text_color)
+        if '\n' in text:
+            draw_obj.multiline_text(position, text, font=font, fill=text_color)
+        else:
+            draw_obj.text(position, text, font=font, fill=text_color)
     
     # Draw texts
     draw_text_with_shadow(draw, title_pos, title, font_title)
