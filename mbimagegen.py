@@ -53,8 +53,8 @@ def create_property_overlay(img, primary_text, secondary_text):
     gradient_dark = (192, 57, 43)
     white = (255, 255, 255)
     
-    # Text area - bottom 20% of image for better visibility
-    text_area_percentage = 0.20  # 20% of image height
+    # Text area - bottom 30% of image for better visibility
+    text_area_percentage = 0.30  # 30% of image height
     gradient_height = int(img.height * text_area_percentage)
     gradient_start_y = img.height - gradient_height
     
