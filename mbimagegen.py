@@ -111,9 +111,9 @@ def create_property_overlay(img, primary_text, secondary_text):
     primary_font = get_marketing_font(36, bold=True)
     secondary_font = get_marketing_font(24, bold=False)
     
-    # Text positioning - confined to bottom 15% area
+    # Text positioning - positioned at the bottom of the red area, not in middle
     text_padding = 30
-    text_start_y = gradient_start_y + (gradient_height // 4)  # Start 25% into the gradient area
+    text_start_y = gradient_start_y + (gradient_height * 0.7)  # Start at 70% into the gradient area (near bottom)
     
     # Helper function for marketing-style text with strong shadows
     def draw_marketing_text(text, position, font, text_color=white):
