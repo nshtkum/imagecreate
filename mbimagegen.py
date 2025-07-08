@@ -35,7 +35,7 @@ def init_hf_client():
 client = init_hf_client()
 
 def create_property_overlay(img, primary_text, secondary_text):
-    """Create a clean property overlay with bottom container"""
+    """Create a clean property overlay with smooth gradient effect"""
     
     # Ensure image is in RGB mode
     if img.mode != 'RGB':
@@ -48,45 +48,57 @@ def create_property_overlay(img, primary_text, secondary_text):
     overlay = Image.new("RGBA", (1200, 675), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
     
-    # Color scheme
-    container_red = (231, 76, 60)
-    container_dark = (192, 57, 43)
+    # Color scheme - vibrant red like in the image
+    gradient_red = (231, 76, 60)
+    gradient_dark = (142, 68, 173)  # Purple-red for depth
     white = (255, 255, 255)
     
-    # Container dimensions - covers bottom portion
-    container_height = 140
-    container_y = img.height - container_height
+    # Create smooth gradient effect covering bottom 40% of image
+    gradient_height = int(img.height * 0.4)  # 40% of image height
+    gradient_start_y = img.height - gradient_height
     
-    # Create subtle gradient background for the container
-    for y in range(container_height):
-        # Create gradient from transparent to solid red
-        gradient_factor = y / container_height
-        alpha = int(200 + (55 * gradient_factor))  # From 200 to 255 alpha
-        r = int(container_dark[0] + (container_red[0] - container_dark[0]) * gradient_factor)
-        g = int(container_dark[1] + (container_red[1] - container_dark[1]) * gradient_factor)
-        b = int(container_dark[2] + (container_red[2] - container_dark[2]) * gradient_factor)
+    # Create the smooth gradient overlay like in your reference image
+    for y in range(gradient_height):
+        # Calculate gradient progression (0 to 1)
+        progress = y / gradient_height
         
-        draw.rectangle([0, container_y + y, img.width, container_y + y + 1], 
+        # Smooth easing function for natural gradient
+        eased_progress = progress * progress * (3.0 - 2.0 * progress)  # Smoothstep
+        
+        # Calculate alpha for transparency effect
+        alpha = int(50 + (205 * eased_progress))  # From 50 to 255
+        
+        # Calculate color interpolation
+        r = int(gradient_dark[0] + (gradient_red[0] - gradient_dark[0]) * eased_progress)
+        g = int(gradient_dark[1] + (gradient_red[1] - gradient_dark[1]) * eased_progress)
+        b = int(gradient_dark[2] + (gradient_red[2] - gradient_dark[2]) * eased_progress)
+        
+        # Draw gradient line
+        draw.rectangle([0, gradient_start_y + y, img.width, gradient_start_y + y + 1], 
                       fill=(r, g, b, alpha))
     
-    # Add subtle shadow above container using transparency gradient
-    shadow_height = 20
-    for i in range(shadow_height):
-        alpha = int(60 * (1 - i / shadow_height))  # Fade from 60 to 0
-        draw.rectangle([0, container_y - shadow_height + i, img.width, container_y - shadow_height + i + 1], 
-                      fill=(0, 0, 0, alpha))
-    
-    # Load fonts with better fallback system
-    def get_font(size):
-        fonts_to_try = [
-            "arial.ttf", "calibri.ttf", "Arial.ttf", "Calibri.ttf",
+    # Load fonts with marketing-style emphasis
+    def get_marketing_font(size, bold=False):
+        # Marketing fonts - bold, impactful typefaces
+        marketing_fonts = [
+            # Windows fonts
+            "arialbd.ttf",  # Arial Bold
+            "calibrib.ttf", # Calibri Bold
+            "arial.ttf",
+            "calibri.ttf",
+            # macOS fonts
+            "/System/Library/Fonts/Arial Bold.ttf",
+            "/System/Library/Fonts/Helvetica-Bold.ttf",
             "/System/Library/Fonts/Arial.ttf",
             "/System/Library/Fonts/Helvetica.ttf",
+            # Linux fonts
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
             "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
         ]
         
-        for font_path in fonts_to_try:
+        for font_path in marketing_fonts:
             try:
                 return ImageFont.truetype(font_path, size)
             except:
@@ -94,40 +106,60 @@ def create_property_overlay(img, primary_text, secondary_text):
         
         return ImageFont.load_default()
     
-    # Font sizes
-    primary_font = get_font(38)
-    secondary_font = get_font(26)
+    # Font sizes for marketing impact
+    primary_font = get_marketing_font(44, bold=True)  # Larger, bolder primary
+    secondary_font = get_marketing_font(28, bold=False)  # Clean secondary
     
-    # Text positioning within the container
-    container_padding = 40
-    text_start_x = container_padding
-    text_start_y = container_y + 30
+    # Text positioning - center in the gradient area
+    text_area_start = gradient_start_y + 40
+    text_area_height = gradient_height - 80
+    container_padding = 50
     
-    # Helper function to draw text with subtle shadow
-    def draw_text_with_shadow(text, position, font, text_color=white):
+    # Helper function to draw text with strong shadow for marketing impact
+    def draw_marketing_text(text, position, font, text_color=white):
         x, y = position
-        # Draw subtle shadow
-        draw.text((x + 1, y + 1), text, font=font, fill=(0, 0, 0, 80))
-        # Draw main text
+        
+        # Strong shadow for readability and impact
+        shadow_offsets = [(2, 2), (1, 1), (3, 3)]
+        for offset_x, offset_y in shadow_offsets:
+            draw.text((x + offset_x, y + offset_y), text, font=font, fill=(0, 0, 0, 120))
+        
+        # Main text with bold appearance
         draw.text((x, y), text, font=font, fill=text_color)
     
-    # Calculate text positions
-    current_y = text_start_y
-    
-    # Primary text
+    # Calculate text positioning for center alignment in gradient area
     if primary_text:
-        draw_text_with_shadow(primary_text, (text_start_x, current_y), primary_font)
-        current_y += 50
+        # Get text dimensions for centering
+        primary_bbox = draw.textbbox((0, 0), primary_text, font=primary_font)
+        primary_width = primary_bbox[2] - primary_bbox[0]
+        primary_height = primary_bbox[3] - primary_bbox[1]
+        
+        # Center horizontally, position in upper part of gradient
+        primary_x = (img.width - primary_width) // 2
+        primary_y = text_area_start + (text_area_height // 3) - (primary_height // 2)
+        
+        draw_marketing_text(primary_text, (primary_x, primary_y), primary_font)
     
-    # Secondary text
     if secondary_text:
-        draw_text_with_shadow(secondary_text, (text_start_x, current_y), secondary_font)
+        # Get text dimensions for centering
+        secondary_bbox = draw.textbbox((0, 0), secondary_text, font=secondary_font)
+        secondary_width = secondary_bbox[2] - secondary_bbox[0]
+        secondary_height = secondary_bbox[3] - secondary_bbox[1]
+        
+        # Center horizontally, position below primary text
+        secondary_x = (img.width - secondary_width) // 2
+        secondary_y = primary_y + primary_height + 20
+        
+        draw_marketing_text(secondary_text, (secondary_x, secondary_y), secondary_font)
     
     # Composite the overlay onto the image
     final_img = Image.alpha_composite(img.convert("RGBA"), overlay)
     
-    # Enhance the final image slightly
+    # Enhance for marketing appeal
     enhancer = ImageEnhance.Contrast(final_img)
+    final_img = enhancer.enhance(1.1)
+    
+    enhancer = ImageEnhance.Color(final_img)
     final_img = enhancer.enhance(1.05)
     
     return final_img.convert("RGB")
@@ -347,7 +379,7 @@ with col2:
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #7f8c8d; padding: 1rem;">
-    <p>🏠 <strong>MagicBricks Style Property Image Generator</strong></p>
-    <p>Create professional property images with MagicBricks-inspired design</p>
+    <p>🏠 <strong>Property Image Generator</strong></p>
+    <p>Create professional property images with clean design</p>
 </div>
 """, unsafe_allow_html=True)
