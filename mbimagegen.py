@@ -579,7 +579,7 @@ with col2:
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #7f8c8d; padding: 1rem;">
-    <p>🏠 <strong>Property Image Generator</strong></p>
+    <p><strong>Magicbricks Image Generator for Content Team</strong></p>
     <p>Create professional property images in multiple sizes for all platforms</p>
 </div>
 """, unsafe_allow_html=True)
