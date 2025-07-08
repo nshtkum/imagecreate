@@ -349,7 +349,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="main-header"><h1>🏠 Property Image Generator</h1></div>', unsafe_allow_html=True)
+st.markdown('<div class="main-header"><h1>🏠 Magicbricks Image Generator for Content Team</h1></div>', unsafe_allow_html=True)
 
 # Sidebar for options
 with st.sidebar:
