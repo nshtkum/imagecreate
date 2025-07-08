@@ -10,7 +10,7 @@ from typing import Optional
 # CONFIGURATION
 # ----------------------------
 st.set_page_config(
-    page_title="Property Image Generator", 
+    page_title="Magicbricks Image Generator", 
     layout="centered",
     page_icon="🏠",
     initial_sidebar_state="collapsed"
