@@ -35,7 +35,7 @@ def init_hf_client():
 client = init_hf_client()
 
 def create_property_overlay(img, primary_text, secondary_text):
-    """Create a clean property overlay with smooth gradient effect"""
+    """Create a seamless property overlay with dissolved gradient in bottom 10-15%"""
     
     # Ensure image is in RGB mode
     if img.mode != 'RGB':
@@ -50,48 +50,49 @@ def create_property_overlay(img, primary_text, secondary_text):
     
     # Color scheme - vibrant red like in the image
     gradient_red = (231, 76, 60)
-    gradient_dark = (142, 68, 173)  # Purple-red for depth
+    gradient_dark = (192, 57, 43)
     white = (255, 255, 255)
     
-    # Create smooth gradient effect covering bottom 40% of image
-    gradient_height = int(img.height * 0.4)  # 40% of image height
+    # Text area - only bottom 15% of image
+    text_area_percentage = 0.15  # 15% of image height
+    gradient_height = int(img.height * text_area_percentage)
     gradient_start_y = img.height - gradient_height
     
-    # Create the smooth gradient overlay like in your reference image
+    # Create completely dissolved/seamless gradient - no visible lines
     for y in range(gradient_height):
         # Calculate gradient progression (0 to 1)
         progress = y / gradient_height
         
-        # Smooth easing function for natural gradient
-        eased_progress = progress * progress * (3.0 - 2.0 * progress)  # Smoothstep
+        # Ultra-smooth easing for completely dissolved effect
+        # Using cubic bezier-like smoothing for seamless blend
+        eased_progress = progress * progress * progress * (progress * (progress * 6 - 15) + 10)
         
-        # Calculate alpha for transparency effect
-        alpha = int(50 + (205 * eased_progress))  # From 50 to 255
+        # Very gradual alpha progression for dissolved effect
+        alpha = int(15 + (200 * eased_progress))  # Start almost transparent (15) to solid (215)
         
-        # Calculate color interpolation
+        # Smooth color interpolation
         r = int(gradient_dark[0] + (gradient_red[0] - gradient_dark[0]) * eased_progress)
         g = int(gradient_dark[1] + (gradient_red[1] - gradient_dark[1]) * eased_progress)
         b = int(gradient_dark[2] + (gradient_red[2] - gradient_dark[2]) * eased_progress)
         
-        # Draw gradient line
+        # Draw ultra-smooth gradient line
         draw.rectangle([0, gradient_start_y + y, img.width, gradient_start_y + y + 1], 
                       fill=(r, g, b, alpha))
     
+    # Add additional smoothing blur effect above gradient for complete dissolution
+    blur_height = 30
+    for i in range(blur_height):
+        progress = 1 - (i / blur_height)
+        alpha = int(5 * progress)  # Very subtle fade
+        draw.rectangle([0, gradient_start_y - blur_height + i, img.width, gradient_start_y - blur_height + i + 1], 
+                      fill=(gradient_dark[0], gradient_dark[1], gradient_dark[2], alpha))
+    
     # Load fonts with marketing-style emphasis
     def get_marketing_font(size, bold=False):
-        # Marketing fonts - bold, impactful typefaces
         marketing_fonts = [
-            # Windows fonts
-            "arialbd.ttf",  # Arial Bold
-            "calibrib.ttf", # Calibri Bold
-            "arial.ttf",
-            "calibri.ttf",
-            # macOS fonts
-            "/System/Library/Fonts/Arial Bold.ttf",
-            "/System/Library/Fonts/Helvetica-Bold.ttf",
-            "/System/Library/Fonts/Arial.ttf",
-            "/System/Library/Fonts/Helvetica.ttf",
-            # Linux fonts
+            "arialbd.ttf", "calibrib.ttf", "arial.ttf", "calibri.ttf",
+            "/System/Library/Fonts/Arial Bold.ttf", "/System/Library/Fonts/Helvetica-Bold.ttf",
+            "/System/Library/Fonts/Arial.ttf", "/System/Library/Fonts/Helvetica.ttf",
             "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
             "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
@@ -106,61 +107,69 @@ def create_property_overlay(img, primary_text, secondary_text):
         
         return ImageFont.load_default()
     
-    # Font sizes for marketing impact
-    primary_font = get_marketing_font(44, bold=True)  # Larger, bolder primary
-    secondary_font = get_marketing_font(28, bold=False)  # Clean secondary
+    # Font sizes optimized for the smaller text area (15% of image)
+    primary_font = get_marketing_font(36, bold=True)
+    secondary_font = get_marketing_font(24, bold=False)
     
-    # Text positioning - center in the gradient area
-    text_area_start = gradient_start_y + 40
-    text_area_height = gradient_height - 80
-    container_padding = 50
+    # Text positioning - confined to bottom 15% area
+    text_padding = 30
+    text_start_y = gradient_start_y + (gradient_height // 4)  # Start 25% into the gradient area
     
-    # Helper function to draw text with strong shadow for marketing impact
+    # Helper function for marketing-style text with strong shadows
     def draw_marketing_text(text, position, font, text_color=white):
         x, y = position
         
-        # Strong shadow for readability and impact
-        shadow_offsets = [(2, 2), (1, 1), (3, 3)]
+        # Strong shadow for readability
+        shadow_offsets = [(2, 2), (1, 1), (3, 3), (4, 4)]
         for offset_x, offset_y in shadow_offsets:
-            draw.text((x + offset_x, y + offset_y), text, font=font, fill=(0, 0, 0, 120))
+            shadow_alpha = 150 - (offset_x * 30)  # Decreasing alpha for depth
+            draw.text((x + offset_x, y + offset_y), text, font=font, fill=(0, 0, 0, shadow_alpha))
         
-        # Main text with bold appearance
+        # Main text
         draw.text((x, y), text, font=font, fill=text_color)
     
-    # Calculate text positioning for center alignment in gradient area
+    # Position text in the confined bottom area
     if primary_text:
-        # Get text dimensions for centering
+        # Get text dimensions
         primary_bbox = draw.textbbox((0, 0), primary_text, font=primary_font)
         primary_width = primary_bbox[2] - primary_bbox[0]
         primary_height = primary_bbox[3] - primary_bbox[1]
         
-        # Center horizontally, position in upper part of gradient
+        # Center horizontally, position in text area
         primary_x = (img.width - primary_width) // 2
-        primary_y = text_area_start + (text_area_height // 3) - (primary_height // 2)
+        primary_y = text_start_y
         
         draw_marketing_text(primary_text, (primary_x, primary_y), primary_font)
-    
-    if secondary_text:
-        # Get text dimensions for centering
-        secondary_bbox = draw.textbbox((0, 0), secondary_text, font=secondary_font)
-        secondary_width = secondary_bbox[2] - secondary_bbox[0]
-        secondary_height = secondary_bbox[3] - secondary_bbox[1]
         
-        # Center horizontally, position below primary text
-        secondary_x = (img.width - secondary_width) // 2
-        secondary_y = primary_y + primary_height + 20
-        
-        draw_marketing_text(secondary_text, (secondary_x, secondary_y), secondary_font)
+        if secondary_text:
+            # Position secondary text below primary
+            secondary_bbox = draw.textbbox((0, 0), secondary_text, font=secondary_font)
+            secondary_width = secondary_bbox[2] - secondary_bbox[0]
+            
+            secondary_x = (img.width - secondary_width) // 2
+            secondary_y = primary_y + primary_height + 8  # Small gap
+            
+            draw_marketing_text(secondary_text, (secondary_x, secondary_y), secondary_font)
     
     # Composite the overlay onto the image
     final_img = Image.alpha_composite(img.convert("RGBA"), overlay)
     
+    # Apply slight blur to the gradient area for even smoother dissolution
+    mask = Image.new("L", (1200, 675), 0)
+    mask_draw = ImageDraw.Draw(mask)
+    
+    # Create mask for gradient area only
+    for y in range(gradient_height):
+        alpha = int(255 * (y / gradient_height))
+        mask_draw.rectangle([0, gradient_start_y + y, img.width, gradient_start_y + y + 1], fill=alpha)
+    
+    # Apply subtle blur to gradient area
+    blurred = final_img.filter(ImageFilter.GaussianBlur(radius=0.5))
+    final_img = Image.composite(blurred, final_img, mask)
+    
     # Enhance for marketing appeal
     enhancer = ImageEnhance.Contrast(final_img)
-    final_img = enhancer.enhance(1.1)
-    
-    enhancer = ImageEnhance.Color(final_img)
-    final_img = enhancer.enhance(1.05)
+    final_img = enhancer.enhance(1.08)
     
     return final_img.convert("RGB")
 
@@ -173,8 +182,8 @@ def generate_ai_image(prompt):
         raise Exception("Hugging Face client not initialized")
     
     try:
-        # Enhanced prompt for better quality
-        enhanced_prompt = f"{prompt}, high quality, professional photography, 4k, detailed, realistic, architectural photography"
+        # Enhanced prompt for better quality - EXPLICITLY avoid text in images
+        enhanced_prompt = f"{prompt}, high quality, professional photography, 4k, detailed, realistic, architectural photography, no text, no words, no letters, clean image without any text overlay"
         
         # Generate image
         image = client.text_to_image(enhanced_prompt)
