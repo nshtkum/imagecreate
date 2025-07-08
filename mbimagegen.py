@@ -10,7 +10,7 @@ from typing import Optional
 # CONFIGURATION
 # ----------------------------
 st.set_page_config(
-    page_title="MagicBricks Style Image Generator", 
+    page_title="Property Image Generator", 
     layout="centered",
     page_icon="🏠",
     initial_sidebar_state="collapsed"
@@ -34,11 +34,8 @@ def init_hf_client():
 
 client = init_hf_client()
 
-# ----------------------------
-# MAGICBRICKS STYLE OVERLAY FUNCTION
-# ----------------------------
-def create_magicbricks_overlay(img, title, subtitle, price, location, features_list=None):
-    """Create a MagicBricks style overlay with bottom container"""
+def create_property_overlay(img, primary_text, secondary_text):
+    """Create a clean property overlay with bottom container"""
     
     # Ensure image is in RGB mode
     if img.mode != 'RGB':
@@ -51,37 +48,36 @@ def create_magicbricks_overlay(img, title, subtitle, price, location, features_l
     overlay = Image.new("RGBA", (1200, 675), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
     
-    # MagicBricks color scheme
-    mb_red = (231, 76, 60)      # MagicBricks red
-    mb_dark_red = (192, 57, 43)  # Darker red for gradient
+    # Color scheme
+    container_red = (231, 76, 60)
+    container_dark = (192, 57, 43)
     white = (255, 255, 255)
-    light_gray = (236, 240, 241)
-    dark_gray = (52, 73, 94)
     
-    # Container dimensions - covers bottom portion like in the image
-    container_height = 200  # Increased height for better content spacing
+    # Container dimensions - covers bottom portion
+    container_height = 140
     container_y = img.height - container_height
     
-    # Create gradient background for the container (red gradient like MagicBricks)
+    # Create subtle gradient background for the container
     for y in range(container_height):
-        # Create gradient from darker red at top to brighter red at bottom
+        # Create gradient from transparent to solid red
         gradient_factor = y / container_height
-        r = int(mb_dark_red[0] + (mb_red[0] - mb_dark_red[0]) * gradient_factor)
-        g = int(mb_dark_red[1] + (mb_red[1] - mb_dark_red[1]) * gradient_factor)
-        b = int(mb_dark_red[2] + (mb_red[2] - mb_dark_red[2]) * gradient_factor)
+        alpha = int(200 + (55 * gradient_factor))  # From 200 to 255 alpha
+        r = int(container_dark[0] + (container_red[0] - container_dark[0]) * gradient_factor)
+        g = int(container_dark[1] + (container_red[1] - container_dark[1]) * gradient_factor)
+        b = int(container_dark[2] + (container_red[2] - container_dark[2]) * gradient_factor)
         
         draw.rectangle([0, container_y + y, img.width, container_y + y + 1], 
-                      fill=(r, g, b, 240))  # Slightly transparent
+                      fill=(r, g, b, alpha))
     
-    # Add a subtle shadow at the top of the container
-    shadow_height = 8
+    # Add subtle shadow above container using transparency gradient
+    shadow_height = 20
     for i in range(shadow_height):
-        alpha = int(80 * (1 - i / shadow_height))
+        alpha = int(60 * (1 - i / shadow_height))  # Fade from 60 to 0
         draw.rectangle([0, container_y - shadow_height + i, img.width, container_y - shadow_height + i + 1], 
                       fill=(0, 0, 0, alpha))
     
     # Load fonts with better fallback system
-    def get_font(size, weight='normal'):
+    def get_font(size):
         fonts_to_try = [
             "arial.ttf", "calibri.ttf", "Arial.ttf", "Calibri.ttf",
             "/System/Library/Fonts/Arial.ttf",
@@ -96,92 +92,41 @@ def create_magicbricks_overlay(img, title, subtitle, price, location, features_l
             except:
                 continue
         
-        # Final fallback
         return ImageFont.load_default()
     
     # Font sizes
-    title_font = get_font(42, 'bold')
-    subtitle_font = get_font(28)
-    price_font = get_font(36, 'bold')
-    location_font = get_font(24)
-    features_font = get_font(20)
+    primary_font = get_font(38)
+    secondary_font = get_font(26)
     
     # Text positioning within the container
     container_padding = 40
     text_start_x = container_padding
-    text_start_y = container_y + 20
+    text_start_y = container_y + 30
     
-    # Helper function to draw text with shadow
-    def draw_text_with_shadow(text, position, font, text_color=white, shadow_color=(0, 0, 0, 100)):
+    # Helper function to draw text with subtle shadow
+    def draw_text_with_shadow(text, position, font, text_color=white):
         x, y = position
-        # Draw shadow
-        draw.text((x + 2, y + 2), text, font=font, fill=shadow_color)
+        # Draw subtle shadow
+        draw.text((x + 1, y + 1), text, font=font, fill=(0, 0, 0, 80))
         # Draw main text
         draw.text((x, y), text, font=font, fill=text_color)
     
     # Calculate text positions
     current_y = text_start_y
     
-    # Title (main property type)
-    if title:
-        draw_text_with_shadow(title, (text_start_x, current_y), title_font)
+    # Primary text
+    if primary_text:
+        draw_text_with_shadow(primary_text, (text_start_x, current_y), primary_font)
         current_y += 50
     
-    # Subtitle (property details)
-    if subtitle:
-        draw_text_with_shadow(subtitle, (text_start_x, current_y), subtitle_font)
-        current_y += 35
-    
-    # Price and Location on the same line
-    if price:
-        draw_text_with_shadow(price, (text_start_x, current_y), price_font)
-        
-        # Get price text width to position location next to it
-        price_bbox = draw.textbbox((0, 0), price, font=price_font)
-        price_width = price_bbox[2] - price_bbox[0]
-        
-        if location:
-            location_x = text_start_x + price_width + 60  # Space between price and location
-            draw_text_with_shadow(f"📍 {location}", (location_x, current_y + 8), location_font)
-        
-        current_y += 45
-    
-    # Features list (if provided)
-    if features_list:
-        features_text = " • ".join(features_list)
-        # Wrap long features text
-        max_width = img.width - (container_padding * 2)
-        words = features_text.split()
-        lines = []
-        current_line = []
-        
-        for word in words:
-            test_line = " ".join(current_line + [word])
-            bbox = draw.textbbox((0, 0), test_line, font=features_font)
-            if bbox[2] - bbox[0] <= max_width:
-                current_line.append(word)
-            else:
-                if current_line:
-                    lines.append(" ".join(current_line))
-                    current_line = [word]
-                else:
-                    current_line.append(word)
-        
-        if current_line:
-            lines.append(" ".join(current_line))
-        
-        # Draw feature lines
-        for line in lines[:2]:  # Limit to 2 lines
-            draw_text_with_shadow(line, (text_start_x, current_y), features_font)
-            current_y += 25
-    
-    # Add a subtle border at the top of the container
-    draw.rectangle([0, container_y, img.width, container_y + 2], fill=white)
+    # Secondary text
+    if secondary_text:
+        draw_text_with_shadow(secondary_text, (text_start_x, current_y), secondary_font)
     
     # Composite the overlay onto the image
     final_img = Image.alpha_composite(img.convert("RGBA"), overlay)
     
-    # Enhance the final image
+    # Enhance the final image slightly
     enhancer = ImageEnhance.Contrast(final_img)
     final_img = enhancer.enhance(1.05)
     
@@ -258,12 +203,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="main-header"><h1>🏠 MagicBricks Style Property Image Generator</h1></div>', unsafe_allow_html=True)
+st.markdown('<div class="main-header"><h1>🏠 Property Image Generator</h1></div>', unsafe_allow_html=True)
 
 # Sidebar for options
 with st.sidebar:
-    st.header("🎨 MagicBricks Style Options")
-    st.markdown("*Create professional property images with MagicBricks-style bottom overlay*")
+    st.header("🎨 Design Options")
     
     st.subheader("📏 Output Settings")
     output_format = st.selectbox(
@@ -271,13 +215,6 @@ with st.sidebar:
         ["PNG", "JPEG"],
         index=0
     )
-    
-    st.subheader("✨ Features")
-    st.markdown("• **MagicBricks Red Theme**")
-    st.markdown("• **Bottom Container Overlay**")
-    st.markdown("• **Professional Typography**")
-    st.markdown("• **Gradient Backgrounds**")
-    st.markdown("• **Social Media Ready (1200x675)**")
 
 # Main content area
 col1, col2 = st.columns([3, 2])
@@ -306,55 +243,28 @@ with col1:
         )
 
 with col2:
-    st.subheader("📝 Property Details")
+    st.subheader("📝 Property Text")
     
-    title = st.text_input(
-        "🏷️ Property Type",
-        value="2BHK Apartment",
-        help="e.g., 2BHK Apartment, 3BHK Villa, etc."
+    primary_text = st.text_input(
+        "Primary Text",
+        value="2BHK Apartment in Bangalore",
+        help="Main headline text"
     )
     
-    subtitle = st.text_input(
-        "📋 Property Details",
-        value="Ready to Move • Fully Furnished",
-        help="e.g., Ready to Move • Fully Furnished"
-    )
-    
-    price = st.text_input(
-        "💰 Price",
-        value="₹85 Lakh",
-        help="e.g., ₹85 Lakh, ₹50K/month"
-    )
-    
-    location = st.text_input(
-        "📍 Location",
-        value="Whitefield, Bangalore",
-        help="e.g., Whitefield, Bangalore"
-    )
-    
-    # Features as multiselect
-    feature_options = [
-        "Parking", "24/7 Security", "Gym", "Swimming Pool", 
-        "Garden", "Elevator", "Power Backup", "Water Supply",
-        "Intercom", "Maintenance Staff", "Children's Play Area",
-        "Club House", "Jogging Track", "CCTV Surveillance"
-    ]
-    
-    selected_features = st.multiselect(
-        "🎯 Property Features",
-        feature_options,
-        default=["Parking", "24/7 Security", "Gym"],
-        help="Select key features of the property"
+    secondary_text = st.text_input(
+        "Secondary Text", 
+        value="₹85 Lakh • Ready to Move",
+        help="Additional details text"
     )
 
 # Generation section
 st.markdown("---")
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
-    if st.button("🚀 Generate MagicBricks Style Image", type="primary", use_container_width=True):
+    if st.button("🚀 Generate Property Image", type="primary", use_container_width=True):
         # Validation
-        if not title.strip():
-            st.error("🚫 Please enter a property type")
+        if not primary_text.strip():
+            st.error("🚫 Please enter primary text")
             st.stop()
         
         if image_source == "🤖 Generate with AI":
@@ -372,7 +282,7 @@ with col2:
                 st.stop()
         
         # Generate the image
-        with st.spinner("🎨 Creating your MagicBricks style property image..."):
+        with st.spinner("🎨 Creating your property image..."):
             try:
                 # Get base image
                 if image_source == "🤖 Generate with AI":
@@ -380,21 +290,18 @@ with col2:
                 else:
                     base_image = Image.open(uploaded_file)
                 
-                # Create the MagicBricks overlay
-                final_image = create_magicbricks_overlay(
+                # Create the overlay
+                final_image = create_property_overlay(
                     base_image,
-                    title.strip(),
-                    subtitle.strip(),
-                    price.strip(),
-                    location.strip(),
-                    selected_features
+                    primary_text.strip(),
+                    secondary_text.strip()
                 )
                 
                 # Success message
-                st.markdown('<div class="success-box">✅ MagicBricks style image generated successfully!</div>', unsafe_allow_html=True)
+                st.markdown('<div class="success-box">✅ Property image generated successfully!</div>', unsafe_allow_html=True)
                 
                 # Display the image
-                st.image(final_image, caption="Your MagicBricks Style Property Image", use_container_width=True)
+                st.image(final_image, caption="Your Property Image", use_container_width=True)
                 
                 # Download and action buttons
                 col1, col2, col3 = st.columns([2, 1, 1])
@@ -409,7 +316,7 @@ with col2:
                     st.download_button(
                         label=f"⬇️ Download {output_format}",
                         data=byte_data,
-                        file_name=f"magicbricks_property_{title.replace(' ', '_').lower()}.{output_format.lower()}",
+                        file_name=f"property_image_{primary_text.replace(' ', '_').lower()}.{output_format.lower()}",
                         mime=f"image/{output_format.lower()}",
                         use_container_width=True
                     )
@@ -420,7 +327,7 @@ with col2:
                 
                 with col3:
                     if st.button("ℹ️ Details", use_container_width=True):
-                        st.info(f"Size: 1200×675px\nFormat: {output_format}\nStyle: MagicBricks")
+                        st.info(f"Size: 1200×675px\nFormat: {output_format}")
                 
                 # Additional info
                 with st.expander("📊 Image Information"):
@@ -428,11 +335,9 @@ with col2:
                     with info_col1:
                         st.markdown("**📐 Dimensions:** 1200 × 675 pixels")
                         st.markdown(f"**📁 Format:** {output_format}")
-                        st.markdown("**🎨 Style:** MagicBricks Theme")
                     with info_col2:
                         st.markdown("**🎯 Optimized for:** Social Media")
                         st.markdown("**📱 Aspect Ratio:** 16:9")
-                        st.markdown("**🌟 Quality:** Professional")
                 
             except Exception as e:
                 st.error(f"❌ Error generating image: {str(e)}")
