@@ -268,24 +268,31 @@ def generate_clarifying_questions(initial_prompt):
         raise Exception("OpenAI client not initialized")
     
     try:
-        system_prompt = """You are an expert real estate marketing consultant and image prompt engineer. 
-        Your job is to ask 3-5 specific, practical questions that will help create a perfect property image prompt.
+        system_prompt = """You are an expert real estate and interior design consultant for Magicbricks, India's leading property platform. 
+        Your job is to ask 3-5 specific, practical questions that will help create perfect property/interior images for:
+        - Real estate listings (apartments, houses, commercial spaces)
+        - Interior design showcases (living rooms, bedrooms, kitchens, bathrooms)
+        - Property blog articles and marketing content
+        - Architectural photography
         
         Focus on questions about:
-        - Property type and architecture style
-        - Location and surroundings
-        - Lighting and time of day
+        - Property type (apartment, villa, office, retail, etc.)
+        - Room type (if interior: living room, bedroom, kitchen, etc.)
+        - Style (modern, traditional, contemporary, luxury, minimalist, etc.)
+        - Target audience (luxury buyers, first-time buyers, renters, etc.)
+        - Lighting preferences (natural daylight, warm evening, bright, moody)
         - Specific features to highlight
-        - Target audience/marketing angle
+        - Indian context (location, cultural elements, local architecture)
         
-        Keep questions concise and multiple choice when possible.
+        Ask practical questions that will help create stunning property images for Indian real estate marketing.
+        Keep questions concise and provide multiple choice options when possible.
         Format as a numbered list."""
         
         response = client.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"I want to create a property image with this basic idea: '{initial_prompt}'. What questions should I ask to make this prompt much more specific and effective for generating a stunning real estate marketing image?"}
+                {"role": "user", "content": f"I want to create a property/interior image with this basic idea: '{initial_prompt}'. What specific questions should I ask to make this prompt perfect for generating stunning real estate or interior design images for Indian property marketing?"}
             ],
             max_tokens=400,
             temperature=0.7
@@ -301,19 +308,28 @@ def enhance_prompt_with_answers(initial_prompt, questions, answers):
         raise Exception("OpenAI client not initialized")
     
     try:
-        system_prompt = """You are an expert at creating detailed, professional image generation prompts for real estate marketing.
+        system_prompt = """You are an expert at creating detailed, professional image generation prompts for Indian real estate and interior design marketing.
         
-        Transform the basic prompt and Q&A into a comprehensive, detailed prompt that will generate a stunning property image.
+        Transform the basic prompt and Q&A into a comprehensive, detailed prompt that will generate stunning property or interior images suitable for:
+        - Real estate listings and marketing
+        - Interior design showcases
+        - Property blog articles
+        - Architectural photography
+        - Magicbricks property platform content
         
         Include specific details about:
-        - Architecture and design style
-        - Lighting and atmosphere
-        - Surroundings and landscaping
+        - Property/room type and purpose
+        - Architectural or interior design style
+        - Lighting and atmosphere (prefer natural lighting for real estate)
+        - Color schemes and materials
+        - Furniture and decor (if interior)
         - Camera angle and composition
         - Professional photography qualities
-        - Marketing appeal elements
+        - Indian context and cultural elements where relevant
         
-        Keep it focused and avoid overly complex descriptions. End with photography quality terms."""
+        Create prompts that will generate images suitable for property marketing in India.
+        Keep it focused, professional, and avoid overly artistic or unrealistic elements.
+        End with professional photography quality terms."""
         
         qa_text = ""
         for i, (q, a) in enumerate(zip(questions.split('\n'), answers), 1):
@@ -324,7 +340,7 @@ def enhance_prompt_with_answers(initial_prompt, questions, answers):
             model="gpt-4",
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Original prompt: '{initial_prompt}'\n\nQ&A Session:\n{qa_text}\n\nCreate an enhanced, detailed prompt for generating a professional property image:"}
+                {"role": "user", "content": f"Original prompt: '{initial_prompt}'\n\nQ&A Session:\n{qa_text}\n\nCreate an enhanced, detailed prompt for generating a professional property/interior image suitable for Indian real estate marketing:"}
             ],
             max_tokens=300,
             temperature=0.7
@@ -574,9 +590,9 @@ with col1:
             
             # Step 1: Initial prompt
             initial_prompt = st.text_input(
-                "✏️ Basic idea for your property image:",
-                value="apartment building in India",
-                help="Start with a simple description"
+                "✏️ Basic idea for your property/interior image:",
+                value="modern living room in Indian apartment",
+                help="Start with a simple description (e.g., 'bedroom interior', 'apartment exterior', 'kitchen design')"
             )
             
             # Initialize session state for the enhancement process
@@ -667,17 +683,17 @@ with col1:
                 # Default prompt area when not using AI enhancement
                 prompt = st.text_area(
                     "📝 Or write your own detailed prompt:",
-                    value="modern Indian apartment building exterior, bright daylight, professional architecture photography",
+                    value="modern living room with comfortable seating, natural lighting, contemporary Indian apartment interior",
                     height=100,
-                    help="Describe the property you want to generate"
+                    help="Describe the property or interior space you want to generate"
                 )
         else:
             # Standard prompt input without AI enhancement
             prompt = st.text_area(
-                "📝 Describe your property",
-                value="modern Indian apartment building exterior, bright daylight, professional architecture photography",
+                "📝 Describe your property/interior",
+                value="modern living room with comfortable seating, natural lighting, contemporary Indian apartment interior",
                 height=100,
-                help="Describe the property you want to generate"
+                help="Describe the property or interior space you want to generate"
             )
         
     elif image_source == "📁 Upload Your Own Image":
@@ -709,18 +725,18 @@ with col1:
         )
 
 with col2:
-    st.subheader("📝 Property Text")
+    st.subheader("📝 Property Text (Optional)")
     
     primary_text = st.text_input(
         "Primary Text",
-        value="2BHK Apartment in Bangalore",
-        help="Main headline text"
+        value="",
+        help="Main headline text (optional - leave empty for image without text overlay)"
     )
     
     secondary_text = st.text_input(
         "Secondary Text", 
-        value="₹85 Lakh • Ready to Move",
-        help="Additional details text"
+        value="",
+        help="Additional details text (optional)"
     )
 
 # Generation section
@@ -728,10 +744,7 @@ st.markdown("---")
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     if st.button("🚀 Generate Property Image(s)", type="primary", use_container_width=True):
-        # Validation
-        if not primary_text.strip():
-            st.error("🚫 Please enter primary text")
-            st.stop()
+        # Validation - primary text is now optional
         
         if image_source == "🤖 Generate with AI":
             if not prompt.strip():
@@ -783,12 +796,21 @@ with col2:
                 
                 for size_name in sizes_to_generate:
                     output_size = IMAGE_SIZES[size_name]
-                    final_image = create_property_overlay(
-                        base_image,
-                        primary_text.strip(),
-                        secondary_text.strip(),
-                        output_size
-                    )
+                    
+                    # Only apply text overlay if primary text is provided
+                    if primary_text.strip():
+                        final_image = create_property_overlay(
+                            base_image,
+                            primary_text.strip(),
+                            secondary_text.strip(),
+                            output_size
+                        )
+                    else:
+                        # Just resize the image without overlay
+                        final_image = base_image.resize(output_size, Image.Resampling.LANCZOS)
+                        if final_image.mode != 'RGB':
+                            final_image = final_image.convert('RGB')
+                    
                     generated_images[size_name] = final_image
                 
                 # Success message
@@ -811,10 +833,11 @@ with col2:
                         byte_data = buf.getvalue()
                         
                         # Download button
+                        filename_base = primary_text.replace(' ', '_').lower() if primary_text.strip() else "property_image"
                         st.download_button(
                             label=f"⬇️ Download {output_format}",
                             data=byte_data,
-                            file_name=f"property_{size_name.lower().replace(' ', '_').replace('(', '').replace(')', '')}_{primary_text.replace(' ', '_').lower()}.{output_format.lower()}",
+                            file_name=f"property_{size_name.lower().replace(' ', '_').replace('(', '').replace(')', '')}_{filename_base}.{output_format.lower()}",
                             mime=f"image/{output_format.lower()}",
                             use_container_width=True,
                             key=f"download_{size_name}"
@@ -836,19 +859,20 @@ with col2:
                     # Create a zip file with all images
                     import zipfile
                     zip_buffer = io.BytesIO()
+                    filename_base = primary_text.replace(' ', '_').lower() if primary_text.strip() else "property_images"
                     
                     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
                         for size_name, final_image in generated_images.items():
                             img_buffer = io.BytesIO()
                             final_image.save(img_buffer, format=output_format, quality=95)
                             
-                            filename = f"property_{size_name.lower().replace(' ', '_').replace('(', '').replace(')', '')}_{primary_text.replace(' ', '_').lower()}.{output_format.lower()}"
+                            filename = f"property_{size_name.lower().replace(' ', '_').replace('(', '').replace(')', '')}_{filename_base}.{output_format.lower()}"
                             zip_file.writestr(filename, img_buffer.getvalue())
                     
                     st.download_button(
                         label="📦 Download All Images (ZIP)",
                         data=zip_buffer.getvalue(),
-                        file_name=f"property_images_{primary_text.replace(' ', '_').lower()}.zip",
+                        file_name=f"{filename_base}.zip",
                         mime="application/zip",
                         use_container_width=True
                     )
@@ -857,9 +881,14 @@ with col2:
                 with st.expander("📊 Generation Summary"):
                     st.markdown(f"**🎯 Generated:** {len(generated_images)} image{'s' if len(generated_images) > 1 else ''}")
                     st.markdown(f"**📁 Format:** {output_format}")
+                    st.markdown(f"**📝 Text Overlay:** {'Yes' if primary_text.strip() else 'No'}")
                     
                     if image_source == "🤖 Generate with AI":
                         st.markdown(f"**🖼️ Source:** AI Generated")
+                        if 'enhanced_prompt' in st.session_state and st.session_state.enhanced_prompt:
+                            st.markdown(f"**🧠 AI Enhanced:** Yes")
+                        else:
+                            st.markdown(f"**🧠 AI Enhanced:** No")
                     elif image_source == "📁 Upload Your Own Image":
                         st.markdown(f"**🖼️ Source:** Uploaded Image")
                     elif image_source == "🎨 AI Generation with Reference Image":
