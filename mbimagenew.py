@@ -260,6 +260,81 @@ def create_property_overlay(img, primary_text, secondary_text, output_size=(1200
     return final_img.convert("RGB")
 
 # ----------------------------
+# AI PROMPT ENHANCEMENT FUNCTIONS
+# ----------------------------
+def generate_clarifying_questions(initial_prompt):
+    """Generate clarifying questions to improve the image prompt"""
+    if not client:
+        raise Exception("OpenAI client not initialized")
+    
+    try:
+        system_prompt = """You are an expert real estate marketing consultant and image prompt engineer. 
+        Your job is to ask 3-5 specific, practical questions that will help create a perfect property image prompt.
+        
+        Focus on questions about:
+        - Property type and architecture style
+        - Location and surroundings
+        - Lighting and time of day
+        - Specific features to highlight
+        - Target audience/marketing angle
+        
+        Keep questions concise and multiple choice when possible.
+        Format as a numbered list."""
+        
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"I want to create a property image with this basic idea: '{initial_prompt}'. What questions should I ask to make this prompt much more specific and effective for generating a stunning real estate marketing image?"}
+            ],
+            max_tokens=400,
+            temperature=0.7
+        )
+        
+        return response.choices[0].message.content
+    except Exception as e:
+        raise Exception(f"Failed to generate questions: {str(e)}")
+
+def enhance_prompt_with_answers(initial_prompt, questions, answers):
+    """Enhance the initial prompt using the answers to clarifying questions"""
+    if not client:
+        raise Exception("OpenAI client not initialized")
+    
+    try:
+        system_prompt = """You are an expert at creating detailed, professional image generation prompts for real estate marketing.
+        
+        Transform the basic prompt and Q&A into a comprehensive, detailed prompt that will generate a stunning property image.
+        
+        Include specific details about:
+        - Architecture and design style
+        - Lighting and atmosphere
+        - Surroundings and landscaping
+        - Camera angle and composition
+        - Professional photography qualities
+        - Marketing appeal elements
+        
+        Keep it focused and avoid overly complex descriptions. End with photography quality terms."""
+        
+        qa_text = ""
+        for i, (q, a) in enumerate(zip(questions.split('\n'), answers), 1):
+            if q.strip() and a.strip():
+                qa_text += f"Q{i}: {q.strip()}\nA{i}: {a.strip()}\n\n"
+        
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"Original prompt: '{initial_prompt}'\n\nQ&A Session:\n{qa_text}\n\nCreate an enhanced, detailed prompt for generating a professional property image:"}
+            ],
+            max_tokens=300,
+            temperature=0.7
+        )
+        
+        return response.choices[0].message.content
+    except Exception as e:
+        raise Exception(f"Failed to enhance prompt: {str(e)}")
+
+# ----------------------------
 # AI IMAGE GENERATION FUNCTIONS
 # ----------------------------
 def generate_ai_image(prompt, output_size=(1200, 675)):
@@ -485,12 +560,125 @@ with col1:
     )
     
     if image_source == "🤖 Generate with AI":
-        prompt = st.text_area(
-            "📝 Describe your property",
-            value="modern Indian apartment building exterior, bright daylight, professional architecture photography",
-            height=100,
-            help="Describe the property you want to generate"
+        st.markdown("### 🎯 AI-Powered Prompt Builder")
+        
+        # Add prompt enhancement feature
+        use_ai_enhancement = st.checkbox(
+            "🧠 Use AI Prompt Assistant", 
+            value=False,
+            help="AI will ask clarifying questions to create a better prompt"
         )
+        
+        if use_ai_enhancement:
+            st.markdown('<div class="new-feature"><strong>🆕 Smart Feature!</strong> AI will ask you questions to create the perfect prompt</div>', unsafe_allow_html=True)
+            
+            # Step 1: Initial prompt
+            initial_prompt = st.text_input(
+                "✏️ Basic idea for your property image:",
+                value="apartment building in India",
+                help="Start with a simple description"
+            )
+            
+            # Initialize session state for the enhancement process
+            if 'questions_generated' not in st.session_state:
+                st.session_state.questions_generated = False
+                st.session_state.questions = ""
+                st.session_state.enhanced_prompt = ""
+            
+            # Step 2: Generate questions
+            if initial_prompt and st.button("🤔 Ask AI for Clarifying Questions", key="generate_questions"):
+                if not client:
+                    st.error("🚫 AI features require OpenAI API key in secrets")
+                else:
+                    with st.spinner("🧠 AI is thinking of questions to improve your prompt..."):
+                        try:
+                            questions = generate_clarifying_questions(initial_prompt)
+                            st.session_state.questions = questions
+                            st.session_state.questions_generated = True
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"❌ Error generating questions: {str(e)}")
+            
+            # Step 3: Show questions and collect answers
+            if st.session_state.questions_generated and st.session_state.questions:
+                st.markdown("#### 📋 AI Generated Questions:")
+                st.markdown(f'<div class="feature-box">{st.session_state.questions}</div>', unsafe_allow_html=True)
+                
+                # Parse questions and create input fields
+                question_lines = [q.strip() for q in st.session_state.questions.split('\n') if q.strip() and any(c.isalpha() for c in q)]
+                answers = []
+                
+                st.markdown("#### ✍️ Your Answers:")
+                for i, question in enumerate(question_lines[:5]):  # Limit to 5 questions
+                    # Remove numbering if present
+                    clean_question = question
+                    for prefix in ['1.', '2.', '3.', '4.', '5.', '1)', '2)', '3)', '4)', '5)']:
+                        if clean_question.startswith(prefix):
+                            clean_question = clean_question[len(prefix):].strip()
+                    
+                    answer = st.text_input(
+                        f"Q{i+1}: {clean_question}",
+                        key=f"answer_{i}",
+                        placeholder="Your answer here..."
+                    )
+                    answers.append(answer)
+                
+                # Step 4: Generate enhanced prompt
+                if st.button("✨ Create Enhanced Prompt", key="enhance_prompt"):
+                    if any(answers):  # At least one answer provided
+                        with st.spinner("🎨 AI is creating your enhanced prompt..."):
+                            try:
+                                enhanced = enhance_prompt_with_answers(initial_prompt, st.session_state.questions, answers)
+                                st.session_state.enhanced_prompt = enhanced
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"❌ Error enhancing prompt: {str(e)}")
+                    else:
+                        st.warning("⚠️ Please answer at least one question to enhance your prompt")
+                
+                # Step 5: Show enhanced prompt
+                if st.session_state.enhanced_prompt:
+                    st.markdown("#### 🚀 Your Enhanced Prompt:")
+                    st.success("✅ AI has created an enhanced prompt for you!")
+                    
+                    # Make the enhanced prompt editable
+                    prompt = st.text_area(
+                        "📝 Final prompt (you can edit this):",
+                        value=st.session_state.enhanced_prompt,
+                        height=120,
+                        help="This is your AI-enhanced prompt. Feel free to modify it!"
+                    )
+                    
+                    # Reset button
+                    if st.button("🔄 Start Over", key="reset_enhancement"):
+                        st.session_state.questions_generated = False
+                        st.session_state.questions = ""
+                        st.session_state.enhanced_prompt = ""
+                        st.rerun()
+                else:
+                    # Fallback manual prompt
+                    prompt = st.text_area(
+                        "📝 Or write your own detailed prompt:",
+                        value="modern Indian apartment building exterior, bright daylight, professional architecture photography",
+                        height=100,
+                        help="Describe the property you want to generate"
+                    )
+            else:
+                # Default prompt area when not using AI enhancement
+                prompt = st.text_area(
+                    "📝 Or write your own detailed prompt:",
+                    value="modern Indian apartment building exterior, bright daylight, professional architecture photography",
+                    height=100,
+                    help="Describe the property you want to generate"
+                )
+        else:
+            # Standard prompt input without AI enhancement
+            prompt = st.text_area(
+                "📝 Describe your property",
+                value="modern Indian apartment building exterior, bright daylight, professional architecture photography",
+                height=100,
+                help="Describe the property you want to generate"
+            )
         
     elif image_source == "📁 Upload Your Own Image":
         uploaded_file = st.file_uploader(
