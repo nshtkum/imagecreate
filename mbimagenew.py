@@ -17,15 +17,10 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Image size configurations
+# Simplified image size configurations - only landscape and portrait
 IMAGE_SIZES = {
-    "Social Media Banner (16:9)": (1200, 675),
-    "Photostory Standard (4:3)": (1200, 900),
-    "Mobile Webstory (9:16)": (720, 1280),
-    "Instagram Square (1:1)": (1080, 1080),
-    "Instagram Story (9:16)": (1080, 1920),
-    "Facebook Post (16:9)": (1200, 630),
-    "Twitter Header (3:1)": (1500, 500)
+    "Landscape (16:9)": (1200, 675),
+    "Portrait (9:16)": (675, 1200)
 }
 
 # Initialize OpenAI client with error handling
@@ -259,126 +254,79 @@ def create_property_overlay(img, primary_text, secondary_text, output_size=(1200
     
     return final_img.convert("RGB")
 
-# ----------------------------
-# AI PROMPT ENHANCEMENT FUNCTIONS
-# ----------------------------
-def generate_clarifying_questions(initial_prompt):
-    """Generate clarifying questions to improve the image prompt"""
-    if not client:
-        raise Exception("OpenAI client not initialized")
+def enhance_prompt_for_realism(user_prompt):
+    """Enhance user prompt to generate realistic, natural property images"""
     
-    try:
-        system_prompt = """You are an expert real estate and interior design consultant for Magicbricks, India's leading property platform. 
-        Your job is to ask 3-5 specific, practical questions that will help create perfect property/interior images for:
-        - Real estate listings (apartments, houses, commercial spaces)
-        - Interior design showcases (living rooms, bedrooms, kitchens, bathrooms)
-        - Property blog articles and marketing content
-        - Architectural photography
-        
-        Focus on questions about:
-        - Property type (apartment, villa, office, retail, etc.)
-        - Room type (if interior: living room, bedroom, kitchen, etc.)
-        - Style (modern, traditional, contemporary, luxury, minimalist, etc.)
-        - Target audience (luxury buyers, first-time buyers, renters, etc.)
-        - Lighting preferences (natural daylight, warm evening, bright, moody)
-        - Specific features to highlight
-        - Indian context (location, cultural elements, local architecture)
-        
-        Ask practical questions that will help create stunning property images for Indian real estate marketing.
-        Keep questions concise and provide multiple choice options when possible.
-        Format as a numbered list."""
-        
-        response = client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"I want to create a property/interior image with this basic idea: '{initial_prompt}'. What specific questions should I ask to make this prompt perfect for generating stunning real estate or interior design images for Indian property marketing?"}
-            ],
-            max_tokens=400,
-            temperature=0.7
-        )
-        
-        return response.choices[0].message.content
-    except Exception as e:
-        raise Exception(f"Failed to generate questions: {str(e)}")
-
-def enhance_prompt_with_answers(initial_prompt, questions, answers):
-    """Enhance the initial prompt using the answers to clarifying questions"""
-    if not client:
-        raise Exception("OpenAI client not initialized")
+    # Keywords that indicate realistic style needed
+    realism_enhancers = [
+        "photorealistic",
+        "natural lighting", 
+        "shot with professional camera",
+        "real estate photography",
+        "architectural photography",
+        "natural daylight",
+        "authentic",
+        "realistic proportions",
+        "natural materials",
+        "professional real estate photo",
+        "high resolution",
+        "sharp focus",
+        "natural colors",
+        "no filters",
+        "documentary style"
+    ]
     
-    try:
-        system_prompt = """You are an expert at creating detailed, professional image generation prompts for Indian real estate and interior design marketing.
-        
-        Transform the basic prompt and Q&A into a comprehensive, detailed prompt that will generate stunning property or interior images suitable for:
-        - Real estate listings and marketing
-        - Interior design showcases
-        - Property blog articles
-        - Architectural photography
-        - Magicbricks property platform content
-        
-        Include specific details about:
-        - Property/room type and purpose
-        - Architectural or interior design style
-        - Lighting and atmosphere (prefer natural lighting for real estate)
-        - Color schemes and materials
-        - Furniture and decor (if interior)
-        - Camera angle and composition
-        - Professional photography qualities
-        - Indian context and cultural elements where relevant
-        
-        Create prompts that will generate images suitable for property marketing in India.
-        Keep it focused, professional, and avoid overly artistic or unrealistic elements.
-        End with professional photography quality terms."""
-        
-        qa_text = ""
-        for i, (q, a) in enumerate(zip(questions.split('\n'), answers), 1):
-            if q.strip() and a.strip():
-                qa_text += f"Q{i}: {q.strip()}\nA{i}: {a.strip()}\n\n"
-        
-        response = client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Original prompt: '{initial_prompt}'\n\nQ&A Session:\n{qa_text}\n\nCreate an enhanced, detailed prompt for generating a professional property/interior image suitable for Indian real estate marketing:"}
-            ],
-            max_tokens=300,
-            temperature=0.7
-        )
-        
-        return response.choices[0].message.content
-    except Exception as e:
-        raise Exception(f"Failed to enhance prompt: {str(e)}")
+    # Remove artificial/fantasy elements
+    avoid_terms = [
+        "artistic", "stylized", "fantasy", "dramatic lighting", 
+        "oversaturated", "HDR effect", "painted", "illustration",
+        "cartoon", "anime", "digital art", "concept art"
+    ]
+    
+    # Clean the prompt from artificial terms
+    clean_prompt = user_prompt
+    for term in avoid_terms:
+        clean_prompt = clean_prompt.replace(term, "")
+    
+    # Add realism enhancers
+    enhanced_prompt = f"{clean_prompt}, photorealistic, natural lighting, professional real estate photography, shot with DSLR camera, natural daylight, authentic architectural details, realistic proportions, high resolution, sharp focus, natural colors, documentary photography style, no artificial effects"
+    
+    return enhanced_prompt
 
 # ----------------------------
-# AI IMAGE GENERATION FUNCTIONS
+# AI IMAGE GENERATION FUNCTION
 # ----------------------------
 def generate_ai_image(prompt, output_size=(1200, 675)):
-    """Generate image using OpenAI's image generation API"""
+    """Generate realistic image using OpenAI's image generation API"""
     if not client:
         raise Exception("OpenAI client not initialized")
     
     try:
-        # Enhanced prompt based on output size
+        # Enhance prompt for maximum realism
+        enhanced_prompt = enhance_prompt_for_realism(prompt)
+        
+        # Add orientation hint based on output size
         width, height = output_size
         aspect_ratio = width / height
         
         if aspect_ratio > 1.5:  # Landscape
-            orientation_hint = "wide angle, landscape orientation"
+            orientation_hint = "wide angle view, landscape orientation"
         elif aspect_ratio < 0.8:  # Portrait
             orientation_hint = "vertical composition, portrait orientation"
         else:  # Square
-            orientation_hint = "square composition, centered"
+            orientation_hint = "square composition, centered view"
         
-        enhanced_prompt = f"{prompt}, {orientation_hint}, high quality, professional photography, 4k, detailed, realistic, architectural photography, no text, no words, no letters, clean image without any text overlay"
+        # Final prompt optimized for realism
+        final_prompt = f"{enhanced_prompt}, {orientation_hint}, shot with professional DSLR camera, natural lighting, high resolution, photojournalism style, no text or graphics overlaid"
         
-        # Generate image using OpenAI
+        # Generate image using OpenAI with highest quality settings
         result = client.images.generate(
-            model="dall-e-3",  # Use DALL-E 3 for better quality
-            prompt=enhanced_prompt,
+            model="dall-e-3",
+            prompt=final_prompt,
             n=1,
             size="1024x1024",
-            quality="hd"  # High quality
+            quality="hd",  # High quality for realism
+            style="natural"  # More realistic style
         )
         
         # Handle both URL and base64 responses
@@ -403,61 +351,11 @@ def generate_ai_image(prompt, output_size=(1200, 675)):
     except Exception as e:
         raise Exception(f"Image generation failed: {str(e)}")
 
-def generate_image_with_uploaded_reference(uploaded_image, prompt):
-    """Generate image using OpenAI's image generation API (fallback to text-only prompt)"""
-    if not client:
-        raise Exception("OpenAI client not initialized")
-    
-    try:
-        # Note: OpenAI's current API doesn't support image-to-image directly
-        # This is a fallback approach using enhanced text prompts
-        
-        # Analyze the uploaded image to create a descriptive prompt
-        # For now, we'll use the user's prompt with additional context
-        enhanced_prompt = f"""
-        {prompt}. 
-        Create a high quality, professional property image with realistic details, 
-        good lighting, and architectural photography style. 
-        The image should be suitable for real estate marketing.
-        No text or words should appear in the image.
-        Style: photorealistic, professional architecture photography, bright natural lighting.
-        """
-        
-        # Generate image using standard OpenAI image generation
-        result = client.images.generate(
-            model="dall-e-3",  # Use DALL-E 3 for better quality
-            prompt=enhanced_prompt,
-            n=1,
-            size="1024x1024",
-            quality="hd"  # High quality
-        )
-        
-        # Get the image URL (not base64 in newer API versions)
-        if hasattr(result.data[0], 'url'):
-            # Download image from URL
-            import requests
-            response = requests.get(result.data[0].url)
-            image = Image.open(io.BytesIO(response.content))
-        else:
-            # Fallback to base64 if available
-            image_base64 = result.data[0].b64_json
-            image_bytes = base64.b64decode(image_base64)
-            image = Image.open(io.BytesIO(image_bytes))
-        
-        # Ensure image is in the correct format
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
-        
-        return image
-            
-    except Exception as e:
-        raise Exception(f"Image generation with reference failed: {str(e)}")
-
 # ----------------------------
 # STREAMLIT UI
 # ----------------------------
 
-# Custom CSS for MagicBricks styling
+# Custom CSS for simple, clean styling
 st.markdown("""
 <style>
     .main-header {
@@ -469,14 +367,6 @@ st.markdown("""
         margin-bottom: 2rem;
         box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
     }
-    .feature-box {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        padding: 1.5rem;
-        border-radius: 12px;
-        border-left: 4px solid #e74c3c;
-        margin: 1rem 0;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
     .success-box {
         background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
         padding: 1.5rem;
@@ -484,14 +374,6 @@ st.markdown("""
         border-left: 4px solid #28a745;
         margin: 1rem 0;
         box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    .size-info {
-        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-        padding: 1rem;
-        border-radius: 8px;
-        border-left: 3px solid #ffc107;
-        margin: 0.5rem 0;
-        font-size: 0.9em;
     }
     .stButton > button {
         background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
@@ -506,416 +388,139 @@ st.markdown("""
         transform: translateY(-2px);
         box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
     }
-    .new-feature {
-        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-        padding: 1rem;
-        border-radius: 8px;
-        border-left: 3px solid #2196f3;
-        margin: 0.5rem 0;
-    }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="main-header"><h1>🏠 Magicbricks Image Generator for Content Team</h1></div>', unsafe_allow_html=True)
+st.markdown('<div class="main-header"><h1>🏠 Magicbricks Image Generator</h1><p>Generate realistic property & interior images</p></div>', unsafe_allow_html=True)
 
-# Sidebar for options
-with st.sidebar:
-    st.header("🎨 Design Options")
+# Main content area
+col1, col2 = st.columns([2, 1])
+
+with col1:
+    # Simple image source selection
+    st.subheader("🖼️ Create Image")
+    image_source = st.radio(
+        "Choose your method:",
+        ["🤖 Generate with AI", "📁 Upload Your Own Image"],
+        horizontal=True
+    )
     
-    st.subheader("📏 Image Size")
+    if image_source == "🤖 Generate with AI":
+        prompt = st.text_area(
+            "📝 Describe what you want to create",
+            value="modern living room with sofa and natural lighting",
+            height=100,
+            help="Examples: 'bedroom interior', 'apartment building exterior', 'kitchen with island', 'office space'"
+        )
+        
+    else:  # Upload image
+        uploaded_file = st.file_uploader(
+            "Choose an image file",
+            type=['png', 'jpg', 'jpeg'],
+            help="Upload your property image"
+        )
+
+with col2:
+    st.subheader("📐 Size & Text")
+    
+    # Simple size selection - only landscape and portrait
     selected_size = st.selectbox(
-        "Choose Output Size",
+        "Image Size",
         list(IMAGE_SIZES.keys()),
         index=0,
-        help="Select the size that best fits your platform"
+        help="Choose landscape for wide images, portrait for tall images"
     )
     
     # Display size info
     width, height = IMAGE_SIZES[selected_size]
-    aspect_ratio = round(width/height, 2)
-    st.markdown(f"""
-    <div class="size-info">
-        <strong>📐 Dimensions:</strong> {width} × {height}px<br>
-        <strong>📊 Aspect Ratio:</strong> {aspect_ratio}:1<br>
-        <strong>📱 Best for:</strong> {selected_size.split('(')[0].strip()}
-    </div>
-    """, unsafe_allow_html=True)
+    st.info(f"📏 {width} × {height} pixels")
     
-    st.subheader("💾 Output Settings")
-    output_format = st.selectbox(
-        "Image Format",
-        ["PNG", "JPEG"],
-        index=0
-    )
-    
-    # Batch generation option
-    st.subheader("🔄 Batch Generation")
-    generate_multiple = st.checkbox(
-        "Generate multiple sizes",
-        help="Generate images for multiple platforms at once"
-    )
-    
-    if generate_multiple:
-        selected_sizes = st.multiselect(
-            "Select sizes to generate",
-            list(IMAGE_SIZES.keys()),
-            default=[selected_size],
-            help="Choose multiple sizes for batch generation"
-        )
-
-# Main content area
-col1, col2 = st.columns([3, 2])
-
-with col1:
-    # Image source selection
-    st.subheader("🖼️ Image Source")
-    image_source = st.radio(
-        "Choose how to get your property image:",
-        ["🤖 Generate with AI", "📁 Upload Your Own Image", "🎨 AI Generation with Reference Image"],
-        horizontal=False
-    )
-    
-    if image_source == "🤖 Generate with AI":
-        st.markdown("### 🎯 AI-Powered Prompt Builder")
-        
-        # Add prompt enhancement feature
-        use_ai_enhancement = st.checkbox(
-            "🧠 Use AI Prompt Assistant", 
-            value=False,
-            help="AI will ask clarifying questions to create a better prompt"
-        )
-        
-        if use_ai_enhancement:
-            st.markdown('<div class="new-feature"><strong>🆕 Smart Feature!</strong> AI will ask you questions to create the perfect prompt</div>', unsafe_allow_html=True)
-            
-            # Step 1: Initial prompt
-            initial_prompt = st.text_input(
-                "✏️ Basic idea for your property/interior image:",
-                value="modern living room in Indian apartment",
-                help="Start with a simple description (e.g., 'bedroom interior', 'apartment exterior', 'kitchen design')"
-            )
-            
-            # Initialize session state for the enhancement process
-            if 'questions_generated' not in st.session_state:
-                st.session_state.questions_generated = False
-                st.session_state.questions = ""
-                st.session_state.enhanced_prompt = ""
-            
-            # Step 2: Generate questions
-            if initial_prompt and st.button("🤔 Ask AI for Clarifying Questions", key="generate_questions"):
-                if not client:
-                    st.error("🚫 AI features require OpenAI API key in secrets")
-                else:
-                    with st.spinner("🧠 AI is thinking of questions to improve your prompt..."):
-                        try:
-                            questions = generate_clarifying_questions(initial_prompt)
-                            st.session_state.questions = questions
-                            st.session_state.questions_generated = True
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"❌ Error generating questions: {str(e)}")
-            
-            # Step 3: Show questions and collect answers
-            if st.session_state.questions_generated and st.session_state.questions:
-                st.markdown("#### 📋 AI Generated Questions:")
-                st.markdown(f'<div class="feature-box">{st.session_state.questions}</div>', unsafe_allow_html=True)
-                
-                # Parse questions and create input fields
-                question_lines = [q.strip() for q in st.session_state.questions.split('\n') if q.strip() and any(c.isalpha() for c in q)]
-                answers = []
-                
-                st.markdown("#### ✍️ Your Answers:")
-                for i, question in enumerate(question_lines[:5]):  # Limit to 5 questions
-                    # Remove numbering if present
-                    clean_question = question
-                    for prefix in ['1.', '2.', '3.', '4.', '5.', '1)', '2)', '3)', '4)', '5)']:
-                        if clean_question.startswith(prefix):
-                            clean_question = clean_question[len(prefix):].strip()
-                    
-                    answer = st.text_input(
-                        f"Q{i+1}: {clean_question}",
-                        key=f"answer_{i}",
-                        placeholder="Your answer here..."
-                    )
-                    answers.append(answer)
-                
-                # Step 4: Generate enhanced prompt
-                if st.button("✨ Create Enhanced Prompt", key="enhance_prompt"):
-                    if any(answers):  # At least one answer provided
-                        with st.spinner("🎨 AI is creating your enhanced prompt..."):
-                            try:
-                                enhanced = enhance_prompt_with_answers(initial_prompt, st.session_state.questions, answers)
-                                st.session_state.enhanced_prompt = enhanced
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"❌ Error enhancing prompt: {str(e)}")
-                    else:
-                        st.warning("⚠️ Please answer at least one question to enhance your prompt")
-                
-                # Step 5: Show enhanced prompt
-                if st.session_state.enhanced_prompt:
-                    st.markdown("#### 🚀 Your Enhanced Prompt:")
-                    st.success("✅ AI has created an enhanced prompt for you!")
-                    
-                    # Make the enhanced prompt editable
-                    prompt = st.text_area(
-                        "📝 Final prompt (you can edit this):",
-                        value=st.session_state.enhanced_prompt,
-                        height=120,
-                        help="This is your AI-enhanced prompt. Feel free to modify it!"
-                    )
-                    
-                    # Reset button
-                    if st.button("🔄 Start Over", key="reset_enhancement"):
-                        st.session_state.questions_generated = False
-                        st.session_state.questions = ""
-                        st.session_state.enhanced_prompt = ""
-                        st.rerun()
-                else:
-                    # Fallback manual prompt
-                    prompt = st.text_area(
-                        "📝 Or write your own detailed prompt:",
-                        value="modern Indian apartment building exterior, bright daylight, professional architecture photography",
-                        height=100,
-                        help="Describe the property you want to generate"
-                    )
-            else:
-                # Default prompt area when not using AI enhancement
-                prompt = st.text_area(
-                    "📝 Or write your own detailed prompt:",
-                    value="modern living room with comfortable seating, natural lighting, contemporary Indian apartment interior",
-                    height=100,
-                    help="Describe the property or interior space you want to generate"
-                )
-        else:
-            # Standard prompt input without AI enhancement
-            prompt = st.text_area(
-                "📝 Describe your property/interior",
-                value="modern living room with comfortable seating, natural lighting, contemporary Indian apartment interior",
-                height=100,
-                help="Describe the property or interior space you want to generate"
-            )
-        
-    elif image_source == "📁 Upload Your Own Image":
-        uploaded_file = st.file_uploader(
-            "Choose an image file",
-            type=['png', 'jpg', 'jpeg'],
-            help="Upload a property image"
-        )
-        
-    elif image_source == "🎨 AI Generation with Reference Image":
-        st.markdown('<div class="new-feature"><strong>🆕 New Feature!</strong> Upload a reference image and AI will create a new property image inspired by your description</div>', unsafe_allow_html=True)
-        st.info("📝 Note: The AI will use your text description to create a new image. The reference image helps you describe what you want!")
-        
-        reference_image = st.file_uploader(
-            "Choose a reference image",
-            type=['png', 'jpg', 'jpeg'],
-            help="Upload a reference image to help describe your vision",
-            key="reference_upload"
-        )
-        
-        if reference_image:
-            st.image(reference_image, caption="Reference Image", use_container_width=True)
-        
-        reference_prompt = st.text_area(
-            "📝 Describe the property image you want to create",
-            value="Create a modern luxury apartment building with glass facades, contemporary architecture, professional lighting, and landscaped surroundings",
-            height=100,
-            help="Describe the property image you want the AI to generate (the reference image is for inspiration)"
-        )
-
-with col2:
-    st.subheader("📝 Property Text (Optional)")
-    
+    # Optional text overlay
+    st.markdown("**Text Overlay (Optional)**")
     primary_text = st.text_input(
-        "Primary Text",
+        "Main text",
         value="",
-        help="Main headline text (optional - leave empty for image without text overlay)"
+        placeholder="e.g., 2BHK Apartment"
     )
     
     secondary_text = st.text_input(
-        "Secondary Text", 
+        "Secondary text",
         value="",
-        help="Additional details text (optional)"
+        placeholder="e.g., ₹45 Lakh • Ready to Move"
     )
 
-# Generation section
+# Generation button
 st.markdown("---")
-col1, col2, col3 = st.columns([1, 2, 1])
-with col2:
-    if st.button("🚀 Generate Property Image(s)", type="primary", use_container_width=True):
-        # Validation - primary text is now optional
+if st.button("🚀 Generate Image", type="primary", use_container_width=True):
+    # Validation
+    if image_source == "🤖 Generate with AI":
+        if not prompt.strip():
+            st.error("🚫 Please describe what you want to create")
+            st.stop()
         
-        if image_source == "🤖 Generate with AI":
-            if not prompt.strip():
-                st.error("🚫 Please describe the property for AI generation")
-                st.stop()
+        if not client:
+            st.error("🚫 AI generation is not available. Please check your OpenAI API key.")
+            st.stop()
             
-            if not client:
-                st.error("🚫 AI generation is not available. Please check your OpenAI API key.")
-                st.stop()
-                
-        elif image_source == "📁 Upload Your Own Image":
-            if not uploaded_file:
-                st.error("🚫 Please upload an image file")
-                st.stop()
-                
-        elif image_source == "🎨 AI Generation with Reference Image":
-            if not reference_image:
-                st.error("🚫 Please upload a reference image")
-                st.stop()
-            if not reference_prompt.strip():
-                st.error("🚫 Please describe how to modify the reference image")
-                st.stop()
-            if not client:
-                st.error("🚫 AI generation is not available. Please check your OpenAI API key.")
-                st.stop()
-        
-        # Determine sizes to generate
-        if generate_multiple and 'selected_sizes' in locals() and selected_sizes:
-            sizes_to_generate = selected_sizes
-        else:
-            sizes_to_generate = [selected_size]
-        
-        # Generate the image(s)
-        with st.spinner(f"🎨 Creating your property image{'s' if len(sizes_to_generate) > 1 else ''}..."):
-            try:
-                # Get base image
-                if image_source == "🤖 Generate with AI":
-                    # Use the largest size for AI generation to maintain quality
-                    max_size = max(IMAGE_SIZES[size] for size in sizes_to_generate)
-                    base_image = generate_ai_image(prompt, max_size)
-                elif image_source == "📁 Upload Your Own Image":
-                    base_image = Image.open(uploaded_file)
-                elif image_source == "🎨 AI Generation with Reference Image":
-                    reference_img = Image.open(reference_image)
-                    base_image = generate_image_with_uploaded_reference(reference_img, reference_prompt)
-                
-                # Generate images for each selected size
-                generated_images = {}
-                
-                for size_name in sizes_to_generate:
-                    output_size = IMAGE_SIZES[size_name]
-                    
-                    # Only apply text overlay if primary text is provided
-                    if primary_text.strip():
-                        final_image = create_property_overlay(
-                            base_image,
-                            primary_text.strip(),
-                            secondary_text.strip(),
-                            output_size
-                        )
-                    else:
-                        # Just resize the image without overlay
-                        final_image = base_image.resize(output_size, Image.Resampling.LANCZOS)
-                        if final_image.mode != 'RGB':
-                            final_image = final_image.convert('RGB')
-                    
-                    generated_images[size_name] = final_image
-                
-                # Success message
-                st.markdown('<div class="success-box">✅ Property image(s) generated successfully!</div>', unsafe_allow_html=True)
-                
-                # Display and download options for each generated image
-                for size_name, final_image in generated_images.items():
-                    st.subheader(f"📱 {size_name}")
-                    
-                    # Display the image
-                    st.image(final_image, caption=f"Property Image - {size_name}", use_container_width=True)
-                    
-                    # Download and action buttons
-                    col1, col2, col3 = st.columns([2, 1, 1])
-                    
-                    with col1:
-                        # Save image to buffer
-                        buf = io.BytesIO()
-                        final_image.save(buf, format=output_format, quality=95)
-                        byte_data = buf.getvalue()
-                        
-                        # Download button
-                        filename_base = primary_text.replace(' ', '_').lower() if primary_text.strip() else "property_image"
-                        st.download_button(
-                            label=f"⬇️ Download {output_format}",
-                            data=byte_data,
-                            file_name=f"property_{size_name.lower().replace(' ', '_').replace('(', '').replace(')', '')}_{filename_base}.{output_format.lower()}",
-                            mime=f"image/{output_format.lower()}",
-                            use_container_width=True,
-                            key=f"download_{size_name}"
-                        )
-                    
-                    with col2:
-                        if st.button("ℹ️ Details", use_container_width=True, key=f"details_{size_name}"):
-                            width, height = IMAGE_SIZES[size_name]
-                            st.info(f"Size: {width}×{height}px\nFormat: {output_format}\nAspect: {round(width/height, 2)}:1")
-                    
-                    # Separator between images
-                    if len(generated_images) > 1:
-                        st.markdown("---")
-                
-                # Batch download option
-                if len(generated_images) > 1:
-                    st.subheader("📦 Batch Download")
-                    
-                    # Create a zip file with all images
-                    import zipfile
-                    zip_buffer = io.BytesIO()
-                    filename_base = primary_text.replace(' ', '_').lower() if primary_text.strip() else "property_images"
-                    
-                    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                        for size_name, final_image in generated_images.items():
-                            img_buffer = io.BytesIO()
-                            final_image.save(img_buffer, format=output_format, quality=95)
-                            
-                            filename = f"property_{size_name.lower().replace(' ', '_').replace('(', '').replace(')', '')}_{filename_base}.{output_format.lower()}"
-                            zip_file.writestr(filename, img_buffer.getvalue())
-                    
-                    st.download_button(
-                        label="📦 Download All Images (ZIP)",
-                        data=zip_buffer.getvalue(),
-                        file_name=f"{filename_base}.zip",
-                        mime="application/zip",
-                        use_container_width=True
-                    )
-                
-                # Additional info
-                with st.expander("📊 Generation Summary"):
-                    st.markdown(f"**🎯 Generated:** {len(generated_images)} image{'s' if len(generated_images) > 1 else ''}")
-                    st.markdown(f"**📁 Format:** {output_format}")
-                    st.markdown(f"**📝 Text Overlay:** {'Yes' if primary_text.strip() else 'No'}")
-                    
-                    if image_source == "🤖 Generate with AI":
-                        st.markdown(f"**🖼️ Source:** AI Generated")
-                        if 'enhanced_prompt' in st.session_state and st.session_state.enhanced_prompt:
-                            st.markdown(f"**🧠 AI Enhanced:** Yes")
-                        else:
-                            st.markdown(f"**🧠 AI Enhanced:** No")
-                    elif image_source == "📁 Upload Your Own Image":
-                        st.markdown(f"**🖼️ Source:** Uploaded Image")
-                    elif image_source == "🎨 AI Generation with Reference Image":
-                        st.markdown(f"**🖼️ Source:** AI Generated with Reference")
-                    
-                    if len(generated_images) > 1:
-                        st.markdown("**📐 Sizes Generated:**")
-                        for size_name in generated_images.keys():
-                            width, height = IMAGE_SIZES[size_name]
-                            st.markdown(f"• {size_name}: {width}×{height}px")
-                
-                # Quick regenerate button
-                col1, col2, col3 = st.columns([1, 1, 1])
-                with col2:
-                    if st.button("🔄 Generate Again", use_container_width=True):
-                        st.rerun()
-                
-            except Exception as e:
-                st.error(f"❌ Error generating image: {str(e)}")
-                st.info("💡 Try with a different image or check your internet connection")
+    elif image_source == "📁 Upload Your Own Image":
+        if not uploaded_file:
+            st.error("🚫 Please upload an image file")
+            st.stop()
+    
+    # Generate the image
+    with st.spinner("🎨 Creating your image..."):
+        try:
+            # Get base image
+            if image_source == "🤖 Generate with AI":
+                output_size = IMAGE_SIZES[selected_size]
+                base_image = generate_ai_image(prompt, output_size)
+            else:
+                base_image = Image.open(uploaded_file)
+            
+            # Apply text overlay if provided, otherwise just resize
+            output_size = IMAGE_SIZES[selected_size]
+            if primary_text.strip():
+                final_image = create_property_overlay(
+                    base_image,
+                    primary_text.strip(),
+                    secondary_text.strip(),
+                    output_size
+                )
+            else:
+                # Just resize the image without overlay
+                final_image = base_image.resize(output_size, Image.Resampling.LANCZOS)
+                if final_image.mode != 'RGB':
+                    final_image = final_image.convert('RGB')
+            
+            # Success message
+            st.markdown('<div class="success-box">✅ Image generated successfully!</div>', unsafe_allow_html=True)
+            
+            # Display the image
+            st.image(final_image, caption=f"Generated Image - {selected_size}", use_container_width=True)
+            
+            # Download button
+            buf = io.BytesIO()
+            final_image.save(buf, format="PNG", quality=95)
+            byte_data = buf.getvalue()
+            
+            filename_base = primary_text.replace(' ', '_').lower() if primary_text.strip() else "magicbricks_image"
+            st.download_button(
+                label="⬇️ Download Image",
+                data=byte_data,
+                file_name=f"{filename_base}_{selected_size.lower().replace(' ', '_').replace('(', '').replace(')', '')}.png",
+                mime="image/png",
+                use_container_width=True
+            )
+            
+        except Exception as e:
+            st.error(f"❌ Error generating image: {str(e)}")
+            st.info("💡 Try with a different description or check your internet connection")
 
 # Footer
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #7f8c8d; padding: 1rem;">
-    <p><strong>Magicbricks Image Generator for Content Team</strong></p>
-    <p>Create professional property images in multiple sizes for all platforms</p>
-    <p><em>Now with OpenAI-powered AI generation and reference image support!</em></p>
+    <p><strong>Magicbricks Image Generator</strong></p>
+    <p>Create realistic property images for listings, blogs, and marketing</p>
 </div>
 """, unsafe_allow_html=True)
